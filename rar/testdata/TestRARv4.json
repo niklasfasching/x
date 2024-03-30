@@ -1,0 +1,12 @@
+[
+  {
+    "ReaderAt": {},
+    "Version": 4,
+    "Offset": 64,
+    "Size": 6,
+    "TotalSize": 6,
+    "Name": "foo.bar"
+  },
+  "foo.bar",
+  "foobar"
+]
