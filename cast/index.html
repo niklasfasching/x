@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <script src="//www.gstatic.com/cast/sdk/libs/receiver/2.0.0/cast_receiver.js"></script>
+    <script defer>
+    window.castReceiverManager = cast.receiver.CastReceiverManager.getInstance();
+    window.messageBus = window.castReceiverManager.getCastMessageBus('urn:x-cast:com.cast.custom');
+    window.mediaMessageBus = window.castReceiverManager.getCastMessageBus('urn:x-cast:com.google.cast.media');
+    window.messageBus.onMessage = (e) => location.href = JSON.parse(e.data).value;
+    window.castReceiverManager.start({statusText: "ready"});
+    </script>
+  </body>
+</html>
