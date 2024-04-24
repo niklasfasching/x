@@ -1,0 +1,10 @@
+[
+  [
+    "=ybegin size=7 name=foo.bar",
+    "=ypart begin=43 end=49",
+    "\ufffd\ufffd\ufffd4\ufffd\ufffd\ufffd",
+    "=yend size=10 pcrc32=71c94e6e"
+  ],
+  "foo\nbar",
+  42
+]
