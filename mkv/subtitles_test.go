@@ -20,7 +20,7 @@ func TestCueStreamer(t *testing.T) {
 	if errEnd != nil || errStart != nil {
 		t.Fatalf("failed to seek: start(%s), end(%s)", errStart, errEnd)
 	}
-	r, err := NewCueStreamer(f, end)
+	r, err := NewCueStreamer(io.NewSectionReader(f, 0, end))
 	if err != nil {
 		t.Fatal("failed to create cue reader", err)
 	}

@@ -21,7 +21,7 @@ func TestMKV(t *testing.T) {
 	if errEnd != nil || errStart != nil {
 		t.Fatalf("failed to seek: start(%s), end(%s)", errStart, errEnd)
 	}
-	m, err := Parse(f, end)
+	m, err := Parse(io.NewSectionReader(f, 0, end))
 	if err != nil {
 		t.Fatal("failed to parse", err)
 	}

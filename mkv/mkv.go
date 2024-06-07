@@ -71,14 +71,19 @@ type Cluster struct {
 }
 
 type EBML struct {
-	io.ReaderAt
+	SizedReaderAt
 	includePaths []string
 	Off          int64
 }
 
+type SizedReaderAt interface {
+	io.ReaderAt
+	Size() int64
+}
+
 var ebmlSig = []byte{0x1A, 0x45, 0xDF, 0xA3}
 
-func Parse(r io.ReaderAt, end int64, includeFields ...string) (m *MKV, err error) {
+func Parse(r SizedReaderAt, includeFields ...string) (m *MKV, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("mkv: %s", e)
@@ -88,12 +93,10 @@ func Parse(r io.ReaderAt, end int64, includeFields ...string) (m *MKV, err error
 	_, err = r.ReadAt(bs, 0)
 	throwIf(!bytes.Equal(bs, ebmlSig), "invalid ebml: %X != %X (%v)", bs, ebmlSig, err)
 	m = &MKV{EBML: &EBML{r, nil, 0}}
-	v := reflect.ValueOf(m).Elem()
 	if len(includeFields) == 0 {
-		m.Unmarshal("/", v, end, m.IDs("/", v, 0, end))
+		v := reflect.ValueOf(m).Elem()
+		m.Unmarshal("/", v, r.Size(), m.IDs("/", v, 0, r.Size()))
 	} else {
-		m.includePaths = []string{"/1A45DFA3/", "/18538067/114D9B74/"} // Header + SeekHead
-		m.Unmarshal("/", v, end, m.IDs("/", v, 0, end))
 		m.seekUnmarshal(includeFields)
 	}
 	return m, nil
@@ -130,7 +133,19 @@ func (e *EBML) Unmarshal(path string, v reflect.Value, end int64, ids map[string
 	e.Off = end
 }
 
+func (m *MKV) unmarshalSeekHead(path string, v reflect.Value, off int64) {
+	m.Off, m.includePaths = off, []string{"/18538067/114D9B74/"}
+	m.Unmarshal(path, v, m.SizedReaderAt.Size(), m.IDs(path, v, 0, -1))
+	for _, s := range m.Segment.SeekHead.Seek {
+		if fmt.Sprintf("%X", s.ID) == "114D9B74" && path == "/" {
+			v := reflect.ValueOf(&m.Segment).Elem()
+			m.unmarshalSeekHead("/18538067/", v, m.Segment.DataOffset+int64(s.Position))
+		}
+	}
+}
+
 func (m *MKV) seekUnmarshal(includeFields []string) {
+	m.unmarshalSeekHead("/", reflect.ValueOf(m).Elem(), m.Off)
 	v, ids := reflect.ValueOf(&m.Segment).Elem(), map[string]int64{}
 	for _, s := range m.Segment.SeekHead.Seek {
 		ids[fmt.Sprintf("%X", s.ID)] = m.Segment.DataOffset + int64(s.Position)
@@ -171,11 +186,11 @@ func (e *EBML) IDs(path string, v reflect.Value, tagLen, end int64) map[string]i
 		f := t.Field(i)
 		if id := f.Tag.Get("ebml"); id != "" && e.isIncluded(path+id+"/") {
 			ids[id] = i
-		} else if f.Name == "Offset" {
+		} else if f.Name == "Offset" && end != -1 {
 			v.Field(i).SetInt(e.Off - tagLen)
-		} else if f.Name == "DataOffset" {
+		} else if f.Name == "DataOffset" && end != -1 {
 			v.Field(i).SetInt(e.Off)
-		} else if f.Name == "Size" {
+		} else if f.Name == "Size" && end != -1 {
 			v.Field(i).SetInt(end - e.Off)
 		}
 	}

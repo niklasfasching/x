@@ -16,7 +16,6 @@ import (
 type CueStreamer struct {
 	*MKV
 	Tracks   map[uint]string
-	End      int64
 	off      int64
 	cluster  *Cluster
 	tmp      bytes.Buffer
@@ -31,8 +30,8 @@ type Cue struct {
 	Text       string
 }
 
-func NewCueStreamer(r io.ReaderAt, size int64) (*CueStreamer, error) {
-	m, err := Parse(r, size, "Info", "Tracks", "Cues")
+func NewCueStreamer(r SizedReaderAt) (*CueStreamer, error) {
+	m, err := Parse(r, "Info", "Tracks", "Cues")
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +41,7 @@ func NewCueStreamer(r io.ReaderAt, size int64) (*CueStreamer, error) {
 			ts[t.ID] = fmt.Sprintf("%s:%s", t.Name, t.Lang)
 		}
 	}
-	return &CueStreamer{MKV: m, Tracks: ts, End: size, subs: map[string]func(Cue){}, cluster: &Cluster{}}, nil
+	return &CueStreamer{MKV: m, Tracks: ts, subs: map[string]func(Cue){}, cluster: &Cluster{}}, nil
 }
 
 func (r *CueStreamer) Sub(c context.Context, k string, f func(Cue)) {
@@ -81,7 +80,7 @@ func (r *CueStreamer) push(bs []byte) error {
 	if _, err := r.tmp.Write(bs[max(0, r.cluster.Offset-r.off):]); err != nil {
 		return err
 	} else if r.cluster.Size == 0 && r.tmp.Len() > 100 {
-		e := &EBML{ReaderAt: bytes.NewReader(r.tmp.Bytes())}
+		e := &EBML{SizedReaderAt: bytes.NewReader(r.tmp.Bytes())}
 		id, size, l := e.Next()
 		if r.tmp.Next(int(l)); id == "1F43B675" {
 			r.cluster.Size = size
@@ -89,14 +88,14 @@ func (r *CueStreamer) push(bs []byte) error {
 			return fmt.Errorf("not a cluster: %s", id)
 		}
 	} else if r.cluster.Size != 0 && int64(r.tmp.Len()) >= r.cluster.Size {
-		e, v := &EBML{ReaderAt: bytes.NewReader(r.tmp.Bytes())}, reflect.ValueOf(r.cluster).Elem()
+		e, v := &EBML{SizedReaderAt: bytes.NewReader(r.tmp.Bytes())}, reflect.ValueOf(r.cluster).Elem()
 		e.Unmarshal("/", v, r.cluster.Size, e.IDs("/", v, 0, r.cluster.Size))
 		r.tmp.Next(int(r.cluster.Size))
 		r.subsLock.Lock()
 		fs := r.subs
 		r.subsLock.Unlock()
 		fmtBlock := func(bs []byte, t, dur, scale float64) {
-			e := &EBML{ReaderAt: bytes.NewReader(bs)}
+			e := &EBML{SizedReaderAt: bytes.NewReader(bs)}
 			trackID, _ := e.Size()
 			if _, ok := r.Tracks[uint(trackID)]; ok {
 				to := int16(binary.BigEndian.Uint16(e.Bytes(2)))
@@ -130,7 +129,7 @@ func (r *CueStreamer) Seek(off int64, whence int) (int64, error) {
 	} else if whence == io.SeekCurrent {
 		r.off += off
 	} else if whence == io.SeekEnd {
-		r.off = r.End + off
+		r.off = r.SizedReaderAt.Size() + off
 	} else {
 		return -1, fmt.Errorf("bad seek: %v", whence)
 	}
