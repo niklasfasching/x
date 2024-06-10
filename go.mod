@@ -3,6 +3,8 @@ module github.com/niklasfasching/x
 go 1.21
 
 require (
-	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8
+	github.com/andybalholm/cascadia v1.3.2
+	github.com/ericchiang/css v1.3.0
+	golang.org/x/net v0.26.0
 	golang.org/x/sync v0.6.0
 )
