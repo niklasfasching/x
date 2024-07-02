@@ -15,13 +15,17 @@ func Decode(bs []byte) (int, []byte, error) {
 	s, pcrc, offset, n := bufio.NewScanner(bytes.NewReader(bs)), crc32.NewIEEE(), 0, 0
 	for s.Scan() {
 		if l := s.Bytes(); bytes.HasPrefix(l, []byte("=y")) {
-			xs, m := strings.Split(string(l), " "), map[string]string{}
+			xs, m, k, v := strings.Split(string(l), " "), map[string]string{}, "", ""
 			for _, x := range xs[1:] {
 				kv := strings.Split(x, "=")
-				if len(kv) != 2 {
-					return -1, nil, fmt.Errorf("%s: bad kv: %s", xs[0], x)
+				if len(kv) == 2 {
+					k, v = strings.ToLower(kv[0]), kv[1]
+					m[k] = v
+				} else if k != "" {
+					m[k] += " " + x
+				} else {
+					return -1, nil, fmt.Errorf("%s: bad kv: %s (%v)", xs[0], x, xs)
 				}
-				m[strings.ToLower(kv[0])] = kv[1]
 			}
 			switch cmd := xs[0]; cmd {
 			case "=ybegin": // line, size, name, part
