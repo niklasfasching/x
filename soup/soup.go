@@ -1,6 +1,7 @@
 package soup
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,6 +31,31 @@ func Load(client *http.Client, url string) (*Node, error) {
 	}
 	defer res.Body.Close()
 	return Parse(res.Body)
+}
+
+func LoadReq(client *http.Client, req *http.Request) (*Node, error) {
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	return Parse(res.Body)
+}
+
+func JSON(client *http.Client, url string, v any) ([]byte, error) {
+	res, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	bs, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	if v == nil {
+		return bs, nil
+	}
+	return bs, json.Unmarshal(bs, v)
 }
 
 func MustLoad(client *http.Client, url string) *Node {

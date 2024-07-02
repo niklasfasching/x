@@ -89,19 +89,21 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func (c *FileCache) Key(req *http.Request) (string, error) {
-	bs, err := io.ReadAll(req.Body)
-	if err != nil {
-		return "", err
-	}
-	req.Body.Close()
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(bs))
 	key := fmt.Sprintf("%s_%s_%s", req.Method, req.URL.Host, req.URL.Path)
 	key = invalidFileNameChars.ReplaceAllString(key, "_")
-	hash := sha1.New()
-	hash.Write([]byte(req.Method + "::" + req.URL.String()))
-	hash.Write(bs)
 	if len(key) > 40 {
 		key = key[:40]
+	}
+	hash := sha1.New()
+	hash.Write([]byte(req.Method + "::" + req.URL.String()))
+	if req.Body != nil {
+		bs, err := io.ReadAll(req.Body)
+		if err != nil {
+			return "", err
+		}
+		req.Body.Close()
+		req.Body = ioutil.NopCloser(bytes.NewBuffer(bs))
+		hash.Write(bs)
 	}
 	return filepath.Join(c.Root, key+hex.EncodeToString(hash.Sum(nil))), nil
 }
