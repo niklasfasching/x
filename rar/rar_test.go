@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/niklasfasching/x/util"
+	"github.com/niklasfasching/x/snap"
 )
 
 func TestRARv4(t *testing.T) {
@@ -30,5 +30,5 @@ func testRAR(t *testing.T, path string) {
 	if err != nil {
 		t.Fatal("failed to read", err)
 	}
-	util.Snapshot(t, []any{r, r.Name, string(bs)})
+	snap.Snap(t, snap.JSON{}, []any{r, r.Name, string(bs)})
 }

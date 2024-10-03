@@ -16,12 +16,16 @@ import (
 
 type RAR struct {
 	io.ReaderAt
-	Version, Offset, Size, TotalSize int64
-	Name                             string
-	off                              int64
+	Details
+	off int64
 }
 
-type RARBlock struct {
+type Details struct {
+	Version, Offset, Size, TotalSize int64
+	Name                             string
+}
+
+type Block struct {
 	Type, HeadSize, Size, ExtraSize int64
 	Flags                           uint16
 }
@@ -75,25 +79,29 @@ func Parse(r io.ReaderAt, exitFileExt string) (rar *RAR, err error) {
 }
 
 func (r *RAR) ReadAt(bs []byte, off int64) (int, error) {
-	l := min(len(bs), int(r.Size-off))
-	c, err := r.ReaderAt.ReadAt(bs[:l], r.Offset+off)
+	return r.Details.ReadAt(r.ReaderAt, bs, off)
+}
+
+func (d *Details) ReadAt(r io.ReaderAt, bs []byte, off int64) (int, error) {
+	l := min(len(bs), int(d.Size-off))
+	c, err := r.ReadAt(bs[:l], d.Offset+off)
 	if err == nil && c != l {
 		return c, io.EOF
 	}
 	return c, err
 }
 
-func (r *RAR) parseBlock4() *RARBlock {
+func (r *RAR) parseBlock4() *Block {
 	r.uint16() // crc
 	headerType, flags := int64(r.bytes(1)[0]), r.uint16()
 	headSize, addSize, i := int64(r.uint16()), int64(0), int64(7)
 	if flags&0x8000 != 0 {
 		addSize, i = int64(r.uint32()), i+4
 	}
-	return &RARBlock{headerType, headSize - i, addSize, 0, flags}
+	return &Block{headerType, headSize - i, addSize, 0, flags}
 }
 
-func (r *RAR) parseFile4(b *RARBlock) (int64, int64, int64, string) {
+func (r *RAR) parseFile4(b *Block) (int64, int64, int64, string) {
 	throwIf(b.Flags&0x04 != 0, "encrypted files are not supported")
 	totalUnpackedSize := int64(r.uint32())
 	r.bytes(10) // os(1) + crc(4) + ftime(4) + version(1)
@@ -117,7 +125,7 @@ func (r *RAR) parseFile4(b *RARBlock) (int64, int64, int64, string) {
 	return r.skip(b.Size) - b.Size, b.Size, totalUnpackedSize, name
 }
 
-func (r *RAR) parseBlock5() *RARBlock {
+func (r *RAR) parseBlock5() *Block {
 	r.uint32() // crc
 	headerSize := int64(r.uvarint())
 	headerOff := r.off
@@ -129,10 +137,10 @@ func (r *RAR) parseBlock5() *RARBlock {
 	if flags&0x0002 != 0 {
 		dataSize = int64(r.uvarint())
 	}
-	return &RARBlock{headerType, headerSize - (r.off - headerOff) - extraSize, dataSize, extraSize, 0}
+	return &Block{headerType, headerSize - (r.off - headerOff) - extraSize, dataSize, extraSize, 0}
 }
 
-func (r *RAR) parseFile5(b *RARBlock) (int64, int64, int64, string) {
+func (r *RAR) parseFile5(b *Block) (int64, int64, int64, string) {
 	fileFlags := r.uvarint()
 	totalUnpackedSize := int64(r.uvarint())
 	r.uvarint()                // attributes
