@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type Cache[T any] string
@@ -19,17 +20,19 @@ func NewCache[T any](base, key string) (Cache[T], error) {
 	return Cache[T](p), os.MkdirAll(p, os.ModePerm)
 }
 
-func (c Cache[T]) Get(k string, f func() (T, error)) (T, error) {
+func (c Cache[T]) Get(k string, d time.Duration, f func() (T, error)) (T, error) {
 	if string(c) == "-" {
 		return f()
 	}
 	h := sha256.New()
 	h.Write([]byte(k))
 	p := filepath.Join(string(c), fmt.Sprintf("%x", h.Sum(nil)))
-	if f, err := os.Open(p); err == nil {
-		defer f.Close()
-		d, v := gob.NewDecoder(f), *new(T)
-		return v, d.Decode(&v)
+	if fi, err := os.Stat(p); err == nil && time.Now().Sub(fi.ModTime()) < d {
+		if f, err := os.Open(p); err == nil {
+			defer f.Close()
+			d, v := gob.NewDecoder(f), *new(T)
+			return v, d.Decode(&v)
+		}
 	}
 	b := &bytes.Buffer{}
 	if v, err := f(); err != nil {
