@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/niklasfasching/x/util"
+	"github.com/niklasfasching/x/snap"
 )
 
 func TestCueStreamer(t *testing.T) {
@@ -45,5 +45,5 @@ func TestCueStreamer(t *testing.T) {
 		t.Fatal("failed to discard", err)
 	}
 	cues3 := cues[:]
-	util.Snapshot(t, []any{cues1, cues2, cues3})
+	snap.Snap(t, snap.JSON{}, []any{cues1, cues2, cues3})
 }

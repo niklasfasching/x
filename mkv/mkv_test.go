@@ -1,13 +1,12 @@
 package mkv
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"testing"
 
-	"github.com/niklasfasching/x/util"
+	"github.com/niklasfasching/x/snap"
 )
 
 func TestMKV(t *testing.T) {
@@ -25,10 +24,6 @@ func TestMKV(t *testing.T) {
 	if err != nil {
 		t.Fatal("failed to parse", err)
 	}
-	util.Snapshot(t, m)
-}
-
-func (m *MKV) MarshalSnap() (string, string, error) {
 	for _, c := range m.Segment.Clusters {
 		for i, b := range c.SimpleBlocks {
 			c.SimpleBlocks[i] = fmt.Sprintf("len:%d", len(b))
@@ -37,6 +32,5 @@ func (m *MKV) MarshalSnap() (string, string, error) {
 			c.BlockGroups[i].Block = fmt.Sprintf("len:%d", len(g.Block))
 		}
 	}
-	bs, err := json.MarshalIndent(m, "", "  ")
-	return string(bs), ".json", err
+	snap.Snap(t, snap.JSON{}, m)
 }

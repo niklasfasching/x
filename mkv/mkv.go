@@ -33,11 +33,12 @@ type MKV struct {
 		} `ebml:"114D9B74"`
 		Tracks struct {
 			Entries []struct {
-				ID      uint   `ebml:"D7"`
-				Name    string `ebml:"536E"`
-				Lang    string `ebml:"22B59C"`
-				CodecID string `ebml:"86"`
-				Type    uint   `ebml:"83"`
+				ID        uint   `ebml:"D7"`
+				Name      string `ebml:"536E"`
+				Lang      string `ebml:"22B59C"`
+				LangBCP47 string `ebml:"22B59D"`
+				CodecID   string `ebml:"86"`
+				Type      uint   `ebml:"83"`
 			} `ebml:"AE"`
 		} `ebml:"1654AE6B"`
 		Info struct {

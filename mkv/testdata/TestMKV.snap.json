@@ -30,6 +30,7 @@
           "ID": 1,
           "Name": "",
           "Lang": "und",
+          "LangBCP47": "",
           "CodecID": "V_MPEG4/ISO/AVC",
           "Type": 1
         },
@@ -37,6 +38,7 @@
           "ID": 2,
           "Name": "",
           "Lang": "und",
+          "LangBCP47": "",
           "CodecID": "A_AAC",
           "Type": 2
         },
@@ -44,6 +46,7 @@
           "ID": 3,
           "Name": "",
           "Lang": "und",
+          "LangBCP47": "",
           "CodecID": "S_TEXT/ASS",
           "Type": 17
         }
