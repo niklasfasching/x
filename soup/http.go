@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/sha1"
+	"crypto/tls"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -40,7 +41,10 @@ var invalidFileNameChars = regexp.MustCompile(`[^-_0-9a-zA-Z]+`)
 
 func (t Transport) Client() (*http.Client, error) {
 	if t.Transport == nil {
-		t.Transport = http.DefaultTransport
+		// some websites block via low tls verions (go defaults to 1.2)
+		t.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
+		}
 	}
 	c := &http.Client{Transport: &t}
 	if t.Cache == nil {
