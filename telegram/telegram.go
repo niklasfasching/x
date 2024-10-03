@@ -1,20 +1,27 @@
 package telegram
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/niklasfasching/x/util"
 )
 
 type T struct {
-	Token  string
+	Token string
+	Client
 	offset int
+}
+
+type Client interface {
+	Do(*http.Request) (*http.Response, error)
 }
 
 type Update struct {
@@ -24,17 +31,22 @@ type Update struct {
 
 type Message struct {
 	Text string `json:"text"`
-	Chat struct {
-		Name string `json:"username"`
-		ID   int    `json:"id"`
-	} `json:"chat"`
+	Chat `json:"chat"`
+}
+
+type Chat struct {
+	Name string `json:"username"`
+	ID   int    `json:"id"`
 }
 
 var apiURL = "https://api.telegram.org"
 
-func (t *T) Start(onMsg func(Message)) error {
+func (t *T) Start(ctx context.Context, onMsg func(Message)) error {
+	if t.Client == nil {
+		t.Client = http.DefaultClient
+	}
 	for {
-		us, err := util.Retry(t.GetUpdates, 5, time.Second)
+		us, err := util.RetryContext(ctx, t.GetUpdates, 5, time.Second)
 		if err != nil {
 			return err
 		}
@@ -45,7 +57,7 @@ func (t *T) Start(onMsg func(Message)) error {
 	}
 }
 
-func (t *T) GetUpdates() ([]Update, error) {
+func (t *T) GetUpdates(ctx context.Context) ([]Update, error) {
 	u, err := url.Parse(fmt.Sprintf(apiURL+"/bot%s/getUpdates", t.Token))
 	if err != nil {
 		return nil, err
@@ -56,7 +68,12 @@ func (t *T) GetUpdates() ([]Update, error) {
 		vs.Add("offset", strconv.Itoa(t.offset))
 	}
 	u.RawQuery = vs.Encode()
-	res, err := http.Get(u.String())
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	res, err := t.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +107,12 @@ func (t *T) SendMessage(chatID int, kvs ...string) error {
 
 func (t *T) POST(method string, vs url.Values, v any) error {
 	u := fmt.Sprintf(apiURL+"/bot%s/%s", t.Token, method)
-	res, err := http.PostForm(u, vs)
+	req, err := http.NewRequest("POST", u, strings.NewReader(vs.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("content-type", "application/x-www-form-urlencoded")
+	res, err := t.Do(req)
 	if err != nil {
 		return err
 	}
