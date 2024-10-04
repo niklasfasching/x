@@ -9,12 +9,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type JML struct{}
-
-func (JML) Marshal(v any) ([]byte, error)    { return jml.Marshal(v) }
-func (JML) Unmarshal(bs []byte, v any) error { return jml.Unmarshal(bs, v) }
-func (JML) Ext() string                      { return ".yml" }
-
 func TestSnap(t *testing.T) {
 	Snap(t, TXT{}, "snap text")
 	Snap(t, TXT{}, "filename", "snap text")
@@ -29,20 +23,20 @@ func TestCasesSnap(t *testing.T) {
 }
 
 func TestMultiSnap(t *testing.T) {
-	s := New(t, JML{})
+	s := New(t, jml.JML{})
 	s.Snap(t, "key 1", "value 1")
 	s.Snap(t, "key 2 ", 2)
 	s.Snap(t, "key 3", struct{ Value int }{3})
 
-	s2 := New(t, JML{}, "custom", "name")
+	s2 := New(t, jml.JML{}, "custom", "name")
 	s2.Snap(t, "k", "v")
 
-	s3 := New(t, JML{}, ".custom-ext")
+	s3 := New(t, jml.JML{}, ".custom-ext")
 	s3.Snap(t, "k", "v")
 }
 
 func TestDiff(t *testing.T) {
-	s, join := New(t, JML{}), func(xs ...int) (s string) {
+	s, join := New(t, jml.JML{}), func(xs ...int) (s string) {
 		for _, x := range xs {
 			s += strconv.Itoa(x) + "\n"
 		}
