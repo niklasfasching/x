@@ -41,7 +41,7 @@ func Snap(t *testing.T, m Marshaller, namePartsAndValue ...any) {
 			t.Fatalf("bad name part: %v", v)
 		}
 	}
-	if name, path := snapName(t, m.Ext(), nameParts...); *updateSnapshots {
+	if name, path := snapName(t, m.Ext(), nameParts...); doUpdate() {
 		updateOnce.Do(deleteSnaps(t))
 		writeSnap(t, name, path, m, v)
 	} else if actual, expected := Marshal(t, m, v), string(readSnap(t, path)); actual != expected {
@@ -67,7 +67,7 @@ func Marshal(t *testing.T, m Marshaller, v any) string {
 func New(t *testing.T, m Marshaller, nameParts ...string) *S {
 	name, path := snapName(t, m.Ext(), nameParts...)
 	s := &S{m, t, map[string]any{}, name, path}
-	if *updateSnapshots {
+	if doUpdate() {
 		updateOnce.Do(deleteSnaps(t))
 		t.Cleanup(func() { writeSnap(t, s.name, path, s.Marshaller, s.snaps) })
 	} else if bs := readSnap(t, path); len(bs) != 0 {
@@ -79,7 +79,7 @@ func New(t *testing.T, m Marshaller, nameParts ...string) *S {
 }
 
 func (s *S) Snap(t *testing.T, k string, v any) {
-	if *updateSnapshots {
+	if doUpdate() {
 		if _, ok := s.snaps[k]; ok {
 			t.Fatalf("duplicate snap key: %s", k)
 		}
@@ -170,4 +170,9 @@ func deleteSnaps(t *testing.T) func() {
 			}
 		}
 	}
+}
+
+func doUpdate() bool {
+	v := strings.ToLower(os.Getenv("UPDATE_SNAPSHOTS"))
+	return *updateSnapshots || v == "true" || v == "1"
 }
