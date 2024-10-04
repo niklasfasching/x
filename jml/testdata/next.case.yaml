@@ -1,0 +1,4 @@
+# empty key crashes parser
+: "v"
+# number -> remainder
+foo: 4200

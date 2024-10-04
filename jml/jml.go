@@ -58,7 +58,7 @@ func Marshal(v interface{}) ([]byte, error) {
 	jm := jmlMarshaler{marshaler{ts: jl.ts}}
 	if err := jm.marshalValue(0); err != nil {
 		return nil, err
-	} else if jm.next().k != "eof" {
+	} else if t := jm.next(); t.k != "eof" {
 		return nil, fmt.Errorf("remainder: %v", jm.ts[jm.i:])
 	}
 	return jm.out, nil
@@ -69,7 +69,7 @@ func (j *jsonLexer) lexSpace() lexFn {
 	case r == -1:
 		return nil
 	case r == '[', r == ']', r == '{', r == '}':
-		return j.emit("object", j.lexSpace)
+		return j.emit("object", j.value(), j.lexSpace)
 	case r == ',':
 		j.start = j.i
 		return j.lexSpace
@@ -88,11 +88,11 @@ func (j *jsonLexer) lexStringOrKey() lexFn {
 			j.next()
 		} else if c == '"' && j.peek() == ':' {
 			j.next()
-			return j.emit("key", j.lexSpace)
+			return j.emit("key", j.value(), j.lexSpace)
 		} else if c == '"' && strings.Contains(j.value(), `\n`) {
-			return j.emit("multiline-string", j.lexSpace)
+			return j.emit("multiline-string", j.value(), j.lexSpace)
 		} else if c == '"' {
-			return j.emit("string", j.lexSpace)
+			return j.emit("string", j.value(), j.lexSpace)
 		}
 	}
 	return j.errorf("unterminated string")
@@ -100,14 +100,14 @@ func (j *jsonLexer) lexStringOrKey() lexFn {
 
 func (j *jsonLexer) lexNumber() lexFn {
 	j.acceptNumber()
-	return j.emit("number", j.lexSpace)
+	return j.emit("number", j.value(), j.lexSpace)
 }
 
 func (j *jsonLexer) lexSymbol() lexFn {
 	j.acceptWhile(func(r rune) bool { return !strings.ContainsRune(` \t\n{}[],"`, r) }, -1)
 	switch v := j.value(); v {
 	case "true", "false", "null", "undefined":
-		return j.emit("symbol", j.lexSpace)
+		return j.emit("symbol", j.value(), j.lexSpace)
 	default:
 		return j.errorf("unexpected '%s'", v)
 	}
@@ -183,16 +183,16 @@ func (j *jmlLexer) lexSpace() lexFn {
 }
 
 func (j *jmlLexer) lexKeyOrSymbol() lexFn {
-	j.acceptWhile(func(r rune) bool { return !strings.ContainsRune(" \t\n:#", r) }, -1)
+	j.acceptWhile(func(r rune) bool { return !strings.ContainsRune("\n:#", r) }, -1)
 	if j.peek() == ':' {
 		j.next()
-		j.emit("key", nil)
+		j.emit("key", j.value(), nil)
 		j.lvl += 2
 		return j.lexSpace
-	} else if v := j.value(); v != "true" && v != "false" && v != "null" {
-		return j.errorf("unexpected symbol '%s'", v)
+	} else if v := strings.TrimSpace(j.value()); v == "true" || v == "false" || v == "null" {
+		return j.emit("symbol", v, j.lexSpace)
 	}
-	return j.emit("symbol", j.lexSpace)
+	return j.errorf("unexpected symbol %q %v", j.value(), j.peek())
 }
 
 func (j *jmlLexer) lexIndent() lexFn {
@@ -210,7 +210,7 @@ func (j *jmlLexer) lexString() lexFn {
 			return j.errorf("unterminated string")
 		}
 	}
-	return j.emit("string", j.lexSpace)
+	return j.emit("string", j.value(), j.lexSpace)
 }
 
 func (j *jmlLexer) lexMultiLineString() lexFn {
@@ -245,13 +245,13 @@ func (j *jmlLexer) lexComment() lexFn {
 
 func (j *jmlLexer) lexKeyOrListOrNumber() lexFn {
 	j.acceptNumber()
-	if v := j.value(); unicode.IsSpace(j.peek()) {
+	if v, r := j.value(), j.peek(); unicode.IsSpace(r) || r == -1 {
 		if v == "-" {
-			j.emit("list", nil)
+			j.emit("list", j.value(), nil)
 			j.lvl += 2
 			return j.lexSpace
 		} else {
-			return j.emit("number", j.lexSpace)
+			return j.emit("number", j.value(), j.lexSpace)
 		}
 	}
 	return j.lexKeyOrSymbol
@@ -357,8 +357,8 @@ func (l *lexer) backup() {
 	l.width = w
 }
 
-func (l *lexer) emit(k string, f lexFn) lexFn {
-	l.ts, l.start = append(l.ts, token{k, l.value(), l.start, l.lvl}), l.i
+func (l *lexer) emit(k, v string, f lexFn) lexFn {
+	l.ts, l.start = append(l.ts, token{k, v, l.start, l.lvl}), l.i
 	return f
 }
 
@@ -388,9 +388,9 @@ func (l *lexer) acceptRun(valid string) int {
 
 func (l *lexer) acceptWhile(f func(rune) bool, n int) int {
 	c := 0
-	for ; f(l.next()) && l.i < len(l.in) && (n == -1 || c < n); c++ {
+	for r := l.peek(); r != -1 && f(r) && (n == -1 || c < n); r, c = l.peek(), c+1 {
+		l.next()
 	}
-	l.backup()
 	return c
 }
 

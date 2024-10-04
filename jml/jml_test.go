@@ -2,59 +2,34 @@ package jml
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"testing"
+
+	"github.com/niklasfasching/x/snap"
 )
 
-func TestJML(t *testing.T) {
-	fs, err := os.ReadDir("testdata")
+func RoundTrip(t *testing.T, bs []byte) {
+	v, asJSON, failed := interface{}(nil), "", false
+	if err := Unmarshal(bs, &v); err != nil {
+		asJSON, failed = "jml unmarshal: "+err.Error(), true
+	} else if bs, err := json.MarshalIndent(v, "", "  "); err != nil {
+		asJSON, failed = "json marshal: "+err.Error(), true
+	} else {
+		asJSON = string(bs)
+	}
+	snap.Snap(t, snap.TXT{}, ".json", asJSON)
+	if failed {
+		return
+	}
+	bs, err := Marshal(v)
+	asJML := string(bs)
 	if err != nil {
-		t.Fatal(err)
+		asJML = "jml marshal: " + err.Error()
 	}
-	for _, f := range fs {
-		if filepath.Ext(f.Name()) != ".yaml" {
-			continue
-		}
-		t.Run(f.Name(), func(t *testing.T) {
-			bs, err := os.ReadFile(filepath.Join("testdata", f.Name()))
-			if err != nil {
-				t.Fatal(err)
-			}
-			v, s := interface{}(nil), ""
-			err = Unmarshal(bs, &v)
-			if err != nil {
-				t.Log("unmarshal", err)
-				s = "unmarshal: " + err.Error()
-			} else if bs, err := json.MarshalIndent(v, "", "  "); err != nil {
-				t.Fatal(err)
-			} else {
-				s = string(bs)
-			}
-			compare(t, filepath.Join("testdata", f.Name()+".json"), s)
-			if err == nil {
-				bs, err := Marshal(v)
-				s = string(bs)
-				if err != nil {
-					t.Log("marshal", err)
-					s = "marshal: " + err.Error()
-				}
-			}
-			compare(t, filepath.Join("testdata", f.Name()+".jml"), s)
-		})
-	}
+	snap.Snap(t, snap.TXT{}, ".yml", asJML)
 }
 
-func compare(t *testing.T, path, actual string) {
-	if os.Getenv("UPDATE") != "" {
-		t.Log("updating", path)
-		if err := os.WriteFile(path, []byte(actual), os.ModePerm); err != nil {
-			t.Fatal(err)
-		}
-	} else {
-		expectedBS, _ := os.ReadFile(path)
-		if actual != string(expectedBS) {
-			t.Fatal("actual and expected output do not match")
-		}
-	}
+func TestCases(t *testing.T) {
+	snap.Cases(t, "*case.yaml", func(t *testing.T, name string, bs []byte) {
+		RoundTrip(t, bs)
+	})
 }

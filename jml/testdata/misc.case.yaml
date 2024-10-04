@@ -6,4 +6,5 @@
     !
 - -key_starting_with_dash:
   000: "number only key"
+  key with spaces: "yolo"
 - 42key_starting_with_number:
