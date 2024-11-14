@@ -1,0 +1,655 @@
+<h1>Storing 200 Billion Entities: Notion’s Data Lake Project</h1>
+<h2 class="header-anchor-post">
+  <a href="https://bit.ly/ScyllaDB_111224" rel="">Data Modeling for Performance: Virtual Masterclass (Sponsored)</a>
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§data-modeling-for-performance-virtual-masterclass-sponsored" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/data-modeling-for-performance-virtual-masterclass-sponsored" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h2>
+<div class="captioned-image-container">
+  <figure>
+    <a class="image-link image2" target="_blank" href="https://bit.ly/ScyllaDB_111224" data-component-name="Image2ToDOM" rel="">
+      <div class="image2-inset">
+        <picture>
+          <source type="image/webp" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F57e1744e-bf23-4825-8352-5af776002e32_1600x840.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F57e1744e-bf23-4825-8352-5af776002e32_1600x840.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F57e1744e-bf23-4825-8352-5af776002e32_1600x840.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F57e1744e-bf23-4825-8352-5af776002e32_1600x840.png 1456w" sizes="100vw"></source>
+          <img src="https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F57e1744e-bf23-4825-8352-5af776002e32_1600x840.png" width="1456" height="764" data-attrs="{&#34;src&#34;:&#34;https://substack-post-media.s3.amazonaws.com/public/images/57e1744e-bf23-4825-8352-5af776002e32_1600x840.png&#34;,&#34;srcNoWatermark&#34;:null,&#34;fullscreen&#34;:null,&#34;imageSize&#34;:null,&#34;height&#34;:764,&#34;width&#34;:1456,&#34;resizeWidth&#34;:null,&#34;bytes&#34;:1058847,&#34;alt&#34;:null,&#34;title&#34;:null,&#34;type&#34;:&#34;image/png&#34;,&#34;href&#34;:&#34;https://bit.ly/ScyllaDB_111224&#34;,&#34;belowTheFold&#34;:false,&#34;topImage&#34;:true,&#34;internalRedirect&#34;:null,&#34;isProcessing&#34;:false}" class="sizing-normal" alt="" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F57e1744e-bf23-4825-8352-5af776002e32_1600x840.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F57e1744e-bf23-4825-8352-5af776002e32_1600x840.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F57e1744e-bf23-4825-8352-5af776002e32_1600x840.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F57e1744e-bf23-4825-8352-5af776002e32_1600x840.png 1456w" sizes="100vw" fetchpriority="high"></img>
+        </picture>
+        <div></div>
+      </div>
+    </a>
+  </figure>
+</div>
+<p>Get battle-tested tips from Bo Ingram, Discord Engineer and Author of ScyllaDB in Action</p>
+<p>This masterclass shares pragmatic data modeling strategies for real-time, always-on use cases. To make the discussion concrete, we’ll teach by example with a sample restaurant review application and live monitoring dashboards. </p>
+<p>After this free 2-hour masterclass, you will know how to:</p>
+<ul>
+  <li>
+    <p>Design a data model that takes advantage of the database’s internal architecture</p>
+  </li>
+  <li>
+    <p>Apply data modeling fundamentals and advanced strategies for performant queries</p>
+  </li>
+  <li>
+    <p>Measure and monitor the performance impact of your data modeling decisions</p>
+  </li>
+  <li>
+    <p>Spot and diagnose the manifestations of common data modeling mistakes</p>
+  </li>
+</ul>
+<p>This is a great way to discover the strategies used by gamechangers like Discord, Disney+, Expedia, and more.</p>
+<p class="button-wrapper" data-attrs="{&#34;url&#34;:&#34;https://bit.ly/ScyllaDB_111224&#34;,&#34;text&#34;:&#34;Register for Free&#34;,&#34;action&#34;:null,&#34;class&#34;:null}" data-component-name="ButtonCreateButton">
+  <a class="button primary" href="https://bit.ly/ScyllaDB_111224" rel="">
+    <span>Register for Free</span>
+  </a>
+</p>
+<div>
+  <hr></hr>
+</div>
+<p>
+  <em>Disclaimer: The details in this post have been derived from the Notion Engineering Blog. All credit for the technical details goes to the Notion engineering team. The links to the original articles are present in the references section at the end of the post. We’ve attempted to analyze the details and provide our input about them. If you find any inaccuracies or omissions, please leave a comment, and we will do our best to fix them.</em>
+</p>
+<p>The famous productivity app Notion has witnessed a staggering 10X data growth since 2021. </p>
+<p>At the start of 2021, they had around 20 billion block rows in Postgres. In 2024, this figure has grown to more than 200 billion blocks. The data volume, even when compressed, is hundreds of terabytes.</p>
+<p>Moreover, all of this block data has been doubling every 6 to 12 months, driven by user activity and content creation.</p>
+<p>Notion’s engineering team had to manage this rapid growth while meeting the ever-increasing data demands of the core product and the analytics use cases. This required them to build and scale Notion’s data lake.</p>
+<p>In this post, we’ll take a look at the challenges Notion faced while doing so and how they overcame those challenges.</p>
+<h2 class="header-anchor-post">What is a Block?
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§what-is-a-block" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/what-is-a-block" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h2>
+<p>Before going further, it’s important to understand the concept of “Block” in Notion.</p>
+<p>Everything you see in the Notion editor (texts, images, headings, lists, pages, etc) is modeled as a “block” entity in the backend. The block types may have different front-end representations and behaviors. However, they are all stored in a Postgres database with a consistent structure, schema, and associated metadata.</p>
+<p>See the diagram below for reference:</p>
+<div class="captioned-image-container">
+  <figure>
+    <a class="image-link image2 is-viewable-imag" target="_blank" href="https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F13405da3-3309-416a-8af7-214ba52bb13c_1600x973.png" data-component-name="Image2ToDOM" rel="">
+      <div class="image2-inset">
+        <picture>
+          <source type="image/webp" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F13405da3-3309-416a-8af7-214ba52bb13c_1600x973.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F13405da3-3309-416a-8af7-214ba52bb13c_1600x973.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F13405da3-3309-416a-8af7-214ba52bb13c_1600x973.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F13405da3-3309-416a-8af7-214ba52bb13c_1600x973.png 1456w" sizes="100vw"></source>
+          <img src="https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F13405da3-3309-416a-8af7-214ba52bb13c_1600x973.png" width="1456" height="885" data-attrs="{&#34;src&#34;:&#34;https://substack-post-media.s3.amazonaws.com/public/images/13405da3-3309-416a-8af7-214ba52bb13c_1600x973.png&#34;,&#34;srcNoWatermark&#34;:null,&#34;fullscreen&#34;:null,&#34;imageSize&#34;:null,&#34;height&#34;:885,&#34;width&#34;:1456,&#34;resizeWidth&#34;:null,&#34;bytes&#34;:null,&#34;alt&#34;:null,&#34;title&#34;:null,&#34;type&#34;:null,&#34;href&#34;:null,&#34;belowTheFold&#34;:true,&#34;topImage&#34;:false,&#34;internalRedirect&#34;:null,&#34;isProcessing&#34;:false}" class="sizing-normal" alt="" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F13405da3-3309-416a-8af7-214ba52bb13c_1600x973.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F13405da3-3309-416a-8af7-214ba52bb13c_1600x973.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F13405da3-3309-416a-8af7-214ba52bb13c_1600x973.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F13405da3-3309-416a-8af7-214ba52bb13c_1600x973.png 1456w" sizes="100vw" loading="lazy"></img>
+        </picture>
+        <div class="image-link-expand">
+          <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize2">
+            <polyline xmlns="http://www.w3.org/2000/svg" points="15 3 21 3 21 9"></polyline>
+            <polyline xmlns="http://www.w3.org/2000/svg" points="9 21 3 21 3 15"></polyline>
+            <line xmlns="http://www.w3.org/2000/svg" x1="21" x2="14" y1="3" y2="10"></line>
+            <line xmlns="http://www.w3.org/2000/svg" x1="3" x2="10" y1="21" y2="14"></line>
+          </svg>
+        </div>
+      </div>
+    </a>
+  </figure>
+</div>
+<p>As Notion started to see data growth, its engineering team opted for sharding to scale the monolithic Postgres instance.</p>
+<ul>
+  <li>
+    <p>In 2021, the Postgres database was sharded to 32 physical instances with each instance comprising 15 logical shards.</p>
+  </li>
+  <li>
+    <p>Next, in 2023, they increased to 96 physical instances with 5 logical shards per instance.</p>
+  </li>
+</ul>
+<p>In essence, they maintained a total of 480 logical shards while increasing the number of physical instances.</p>
+<p>See the diagram below for reference:</p>
+<div class="captioned-image-container">
+  <figure>
+    <a class="image-link image2 is-viewable-imag" target="_blank" href="https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb549fca7-2fa4-414f-8737-2cece6973709_1600x993.png" data-component-name="Image2ToDOM" rel="">
+      <div class="image2-inset">
+        <picture>
+          <source type="image/webp" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb549fca7-2fa4-414f-8737-2cece6973709_1600x993.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb549fca7-2fa4-414f-8737-2cece6973709_1600x993.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb549fca7-2fa4-414f-8737-2cece6973709_1600x993.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb549fca7-2fa4-414f-8737-2cece6973709_1600x993.png 1456w" sizes="100vw"></source>
+          <img src="https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb549fca7-2fa4-414f-8737-2cece6973709_1600x993.png" width="1456" height="904" data-attrs="{&#34;src&#34;:&#34;https://substack-post-media.s3.amazonaws.com/public/images/b549fca7-2fa4-414f-8737-2cece6973709_1600x993.png&#34;,&#34;srcNoWatermark&#34;:null,&#34;fullscreen&#34;:null,&#34;imageSize&#34;:null,&#34;height&#34;:904,&#34;width&#34;:1456,&#34;resizeWidth&#34;:null,&#34;bytes&#34;:null,&#34;alt&#34;:null,&#34;title&#34;:null,&#34;type&#34;:null,&#34;href&#34;:null,&#34;belowTheFold&#34;:true,&#34;topImage&#34;:false,&#34;internalRedirect&#34;:null,&#34;isProcessing&#34;:false}" class="sizing-normal" alt="" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb549fca7-2fa4-414f-8737-2cece6973709_1600x993.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb549fca7-2fa4-414f-8737-2cece6973709_1600x993.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb549fca7-2fa4-414f-8737-2cece6973709_1600x993.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fb549fca7-2fa4-414f-8737-2cece6973709_1600x993.png 1456w" sizes="100vw" loading="lazy"></img>
+        </picture>
+        <div class="image-link-expand">
+          <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize2">
+            <polyline xmlns="http://www.w3.org/2000/svg" points="15 3 21 3 21 9"></polyline>
+            <polyline xmlns="http://www.w3.org/2000/svg" points="9 21 3 21 3 15"></polyline>
+            <line xmlns="http://www.w3.org/2000/svg" x1="21" x2="14" y1="3" y2="10"></line>
+            <line xmlns="http://www.w3.org/2000/svg" x1="3" x2="10" y1="21" y2="14"></line>
+          </svg>
+        </div>
+      </div>
+    </a>
+  </figure>
+</div>
+<p>In 2021, Postgres at Notion catered to online user traffic as well as the various offline data analytics and machine learning requirements. However, as the demands grew for both data needs, the Notion engineering team decided to build a dedicated data infrastructure to handle offline data without interfering with online traffic.</p>
+<div>
+  <hr></hr>
+</div>
+<h2 class="header-anchor-post">
+  <a href="https://bit.ly/Retool_111224" rel="">Build client and partner portals in 30 minutes (Sponsored)</a>
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§build-client-and-partner-portals-in-minutes-sponsored" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/build-client-and-partner-portals-in-minutes-sponsored" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h2>
+<div class="captioned-image-container">
+  <figure>
+    <a class="image-link image2" target="_blank" href="https://bit.ly/Retool_111224" data-component-name="Image2ToDOM" rel="">
+      <div class="image2-inset">
+        <picture>
+          <source type="image/webp" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F787fd6d8-d9ae-4fb5-9611-8275ccf4906c_1600x900.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F787fd6d8-d9ae-4fb5-9611-8275ccf4906c_1600x900.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F787fd6d8-d9ae-4fb5-9611-8275ccf4906c_1600x900.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F787fd6d8-d9ae-4fb5-9611-8275ccf4906c_1600x900.png 1456w" sizes="100vw"></source>
+          <img src="https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F787fd6d8-d9ae-4fb5-9611-8275ccf4906c_1600x900.png" width="1456" height="819" data-attrs="{&#34;src&#34;:&#34;https://substack-post-media.s3.amazonaws.com/public/images/787fd6d8-d9ae-4fb5-9611-8275ccf4906c_1600x900.png&#34;,&#34;srcNoWatermark&#34;:null,&#34;fullscreen&#34;:null,&#34;imageSize&#34;:null,&#34;height&#34;:819,&#34;width&#34;:1456,&#34;resizeWidth&#34;:null,&#34;bytes&#34;:195758,&#34;alt&#34;:&#34;&#34;,&#34;title&#34;:null,&#34;type&#34;:&#34;image/png&#34;,&#34;href&#34;:&#34;https://bit.ly/Retool_111224&#34;,&#34;belowTheFold&#34;:true,&#34;topImage&#34;:false,&#34;internalRedirect&#34;:null,&#34;isProcessing&#34;:false}" class="sizing-normal" alt="" title="" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F787fd6d8-d9ae-4fb5-9611-8275ccf4906c_1600x900.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F787fd6d8-d9ae-4fb5-9611-8275ccf4906c_1600x900.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F787fd6d8-d9ae-4fb5-9611-8275ccf4906c_1600x900.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F787fd6d8-d9ae-4fb5-9611-8275ccf4906c_1600x900.png 1456w" sizes="100vw" loading="lazy"></img>
+        </picture>
+        <div></div>
+      </div>
+    </a>
+  </figure>
+</div>
+<p>Are your engineering teams spending months building and maintaining customer-facing dashboards and portals?</p>
+<p>Join our 30-minute demo to see how you can:</p>
+<ul>
+  <li>
+    <p>Launch custom portals with minimal engineering resources</p>
+  </li>
+  <li>
+    <p>Build end-to-end white-labeled, beautiful apps</p>
+  </li>
+  <li>
+    <p>Add user auth and secure data access</p>
+  </li>
+  <li>
+    <p>Simplify development with multi-tenant workspaces</p>
+  </li>
+</ul>
+<p>Hear why companies are building their products and client-facing tools with Retool: Teachable launched enterprise analytics to 1,000+ customers in just two months, while Ylopo scaled their customer portal from hundreds to tens of thousands of users in weeks by externalizing their Retool apps.</p>
+<p class="button-wrapper" data-attrs="{&#34;url&#34;:&#34;https://bit.ly/Retool_111224&#34;,&#34;text&#34;:&#34;Register today&#34;,&#34;action&#34;:null,&#34;class&#34;:&#34;button-wrapper&#34;}" data-component-name="ButtonCreateButton">
+  <a class="button primary button-wrapper" href="https://bit.ly/Retool_111224" rel="">
+    <span>Register today</span>
+  </a>
+</p>
+<div>
+  <hr></hr>
+</div>
+<h2 class="header-anchor-post">The Initial Data Warehouse Architecture
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§the-initial-data-warehouse-architecture" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/the-initial-data-warehouse-architecture" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h2>
+<p>Notion built the first dedicated data infrastructure in 2021. It was a simple ELT (Extract, Load, and Transform) pipeline.</p>
+<p>See the diagram below:</p>
+<div class="captioned-image-container">
+  <figure>
+    <a class="image-link image2 is-viewable-imag" target="_blank" href="https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40214965-2a36-497e-9045-bbce36998055_1600x994.png" data-component-name="Image2ToDOM" rel="">
+      <div class="image2-inset">
+        <picture>
+          <source type="image/webp" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40214965-2a36-497e-9045-bbce36998055_1600x994.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40214965-2a36-497e-9045-bbce36998055_1600x994.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40214965-2a36-497e-9045-bbce36998055_1600x994.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40214965-2a36-497e-9045-bbce36998055_1600x994.png 1456w" sizes="100vw"></source>
+          <img src="https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40214965-2a36-497e-9045-bbce36998055_1600x994.png" width="1456" height="905" data-attrs="{&#34;src&#34;:&#34;https://substack-post-media.s3.amazonaws.com/public/images/40214965-2a36-497e-9045-bbce36998055_1600x994.png&#34;,&#34;srcNoWatermark&#34;:null,&#34;fullscreen&#34;:null,&#34;imageSize&#34;:null,&#34;height&#34;:905,&#34;width&#34;:1456,&#34;resizeWidth&#34;:null,&#34;bytes&#34;:null,&#34;alt&#34;:null,&#34;title&#34;:null,&#34;type&#34;:null,&#34;href&#34;:null,&#34;belowTheFold&#34;:true,&#34;topImage&#34;:false,&#34;internalRedirect&#34;:null,&#34;isProcessing&#34;:false}" class="sizing-normal" alt="" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40214965-2a36-497e-9045-bbce36998055_1600x994.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40214965-2a36-497e-9045-bbce36998055_1600x994.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40214965-2a36-497e-9045-bbce36998055_1600x994.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F40214965-2a36-497e-9045-bbce36998055_1600x994.png 1456w" sizes="100vw" loading="lazy"></img>
+        </picture>
+        <div class="image-link-expand">
+          <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize2">
+            <polyline xmlns="http://www.w3.org/2000/svg" points="15 3 21 3 21 9"></polyline>
+            <polyline xmlns="http://www.w3.org/2000/svg" points="9 21 3 21 3 15"></polyline>
+            <line xmlns="http://www.w3.org/2000/svg" x1="21" x2="14" y1="3" y2="10"></line>
+            <line xmlns="http://www.w3.org/2000/svg" x1="3" x2="10" y1="21" y2="14"></line>
+          </svg>
+        </div>
+      </div>
+    </a>
+  </figure>
+</div>
+<p>The pipeline worked as follows:</p>
+<ul>
+  <li>
+    <p>A third-party tool Fivetran ingested data from the Postgres WAL (Write Ahead Log) for all the 480 shards. In other words, there were 480 hourly-run connectors.</p>
+  </li>
+  <li>
+    <p>Fivetran sent the ingested data to 480 raw Snowflake tables.</p>
+  </li>
+  <li>
+    <p>Within Snowflake, these tables were merged into a single large table for analytics, reporting, and machine learning requirements.</p>
+  </li>
+</ul>
+<p>There were multiple scaling challenges with this approach.</p>
+<h3 class="header-anchor-post">1 - Operational Difficulty
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§operational-difficulty" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/operational-difficulty" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h3>
+<p>Monitoring and managing 480 Fivetran connectors (one for every shard) was a difficult job. </p>
+<p>Activities such as re-syncing these connectors during Postgres re-sharding, upgrade, and maintenance periods created a significant on-call burden for the support team.</p>
+<h3 class="header-anchor-post">2 - Speed and Cost
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§speed-and-cost" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/speed-and-cost" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h3>
+<p>Ingesting data to Snowflake became slower and costlier, particularly due to Notion’s update-heavy workload.</p>
+<p>Since Notion’s primary use is note-taking and managing those notes, users update existing blocks much more often than they add new ones. This results in an update-heavy workload. </p>
+<p>However, most data warehouses (including Snowflake) are optimized for insert-heavy workloads.</p>
+<h3 class="header-anchor-post">3 - Support for Requirements
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§support-for-requirements" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/support-for-requirements" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h3>
+<p>Even more than the first two, the lack of support for certain requirements eventually became a more important challenge.</p>
+<p>As Notion grew, the data transformation logic became more complex and heavy, making it difficult to handle using the standard SQL interface offered by off-the-shelf data warehouses.</p>
+<p>For example, an important use case was to construct denormalized views of Notion’s block data for key features related to AI and Search. However, constructing permission data for a block was difficult since it wasn’t statically stored in Postgres but constructed on the fly via tree traversal computation.</p>
+<p>See the example below:</p>
+<div class="captioned-image-container">
+  <figure>
+    <a class="image-link image2 is-viewable-imag" target="_blank" href="https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7478333f-1250-4ed8-b636-057fd80464fc_1600x1347.png" data-component-name="Image2ToDOM" rel="">
+      <div class="image2-inset">
+        <picture>
+          <source type="image/webp" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7478333f-1250-4ed8-b636-057fd80464fc_1600x1347.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7478333f-1250-4ed8-b636-057fd80464fc_1600x1347.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7478333f-1250-4ed8-b636-057fd80464fc_1600x1347.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7478333f-1250-4ed8-b636-057fd80464fc_1600x1347.png 1456w" sizes="100vw"></source>
+          <img src="https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7478333f-1250-4ed8-b636-057fd80464fc_1600x1347.png" width="1456" height="1226" data-attrs="{&#34;src&#34;:&#34;https://substack-post-media.s3.amazonaws.com/public/images/7478333f-1250-4ed8-b636-057fd80464fc_1600x1347.png&#34;,&#34;srcNoWatermark&#34;:null,&#34;fullscreen&#34;:null,&#34;imageSize&#34;:null,&#34;height&#34;:1226,&#34;width&#34;:1456,&#34;resizeWidth&#34;:null,&#34;bytes&#34;:null,&#34;alt&#34;:null,&#34;title&#34;:null,&#34;type&#34;:null,&#34;href&#34;:null,&#34;belowTheFold&#34;:true,&#34;topImage&#34;:false,&#34;internalRedirect&#34;:null,&#34;isProcessing&#34;:false}" class="sizing-normal" alt="" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7478333f-1250-4ed8-b636-057fd80464fc_1600x1347.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7478333f-1250-4ed8-b636-057fd80464fc_1600x1347.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7478333f-1250-4ed8-b636-057fd80464fc_1600x1347.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F7478333f-1250-4ed8-b636-057fd80464fc_1600x1347.png 1456w" sizes="100vw" loading="lazy"></img>
+        </picture>
+        <div class="image-link-expand">
+          <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize2">
+            <polyline xmlns="http://www.w3.org/2000/svg" points="15 3 21 3 21 9"></polyline>
+            <polyline xmlns="http://www.w3.org/2000/svg" points="9 21 3 21 3 15"></polyline>
+            <line xmlns="http://www.w3.org/2000/svg" x1="21" x2="14" y1="3" y2="10"></line>
+            <line xmlns="http://www.w3.org/2000/svg" x1="3" x2="10" y1="21" y2="14"></line>
+          </svg>
+        </div>
+      </div>
+    </a>
+  </figure>
+</div>
+<p>In this example, the various blocks (block_1, block_2, and block_3) inherit permissions from their immediate parents (page_3 and page_2) and ancestors (page_1 and the workspace itself). </p>
+<p>Permission data for such blocks can be built only by traversing the tree up to the root (i.e. the workspace). With billions of blocks, Notion found this computation very costly in Snowflake.</p>
+<h2 class="header-anchor-post">Notion’s New Data Lake
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§notions-new-data-lake" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/notions-new-data-lake" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h2>
+<p>Due to the challenges with scaling and operating the initial data warehouse, Notion decided to build a new in-house data lake with the below objectives:</p>
+<ul>
+  <li>
+    <p>The data repository should be capable of storing both raw and processed data at scale.</p>
+  </li>
+  <li>
+    <p>Data ingestion and computation for Notion’s update-heavy block data should be fast, scalable, and cost-efficient.</p>
+  </li>
+  <li>
+    <p>Support for denormalized data that can unlock critical features like AI and Search.</p>
+  </li>
+</ul>
+<p>The diagram below shows the high-level design of the new data lake.</p>
+<div class="captioned-image-container">
+  <figure>
+    <a class="image-link image2 is-viewable-imag" target="_blank" href="https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F436a1b95-5fee-4a9a-b4c6-ea60b60ed0a5_1600x965.png" data-component-name="Image2ToDOM" rel="">
+      <div class="image2-inset">
+        <picture>
+          <source type="image/webp" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F436a1b95-5fee-4a9a-b4c6-ea60b60ed0a5_1600x965.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F436a1b95-5fee-4a9a-b4c6-ea60b60ed0a5_1600x965.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F436a1b95-5fee-4a9a-b4c6-ea60b60ed0a5_1600x965.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F436a1b95-5fee-4a9a-b4c6-ea60b60ed0a5_1600x965.png 1456w" sizes="100vw"></source>
+          <img src="https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F436a1b95-5fee-4a9a-b4c6-ea60b60ed0a5_1600x965.png" width="1456" height="878" data-attrs="{&#34;src&#34;:&#34;https://substack-post-media.s3.amazonaws.com/public/images/436a1b95-5fee-4a9a-b4c6-ea60b60ed0a5_1600x965.png&#34;,&#34;srcNoWatermark&#34;:null,&#34;fullscreen&#34;:null,&#34;imageSize&#34;:null,&#34;height&#34;:878,&#34;width&#34;:1456,&#34;resizeWidth&#34;:null,&#34;bytes&#34;:null,&#34;alt&#34;:null,&#34;title&#34;:null,&#34;type&#34;:null,&#34;href&#34;:null,&#34;belowTheFold&#34;:true,&#34;topImage&#34;:false,&#34;internalRedirect&#34;:null,&#34;isProcessing&#34;:false}" class="sizing-normal" alt="" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F436a1b95-5fee-4a9a-b4c6-ea60b60ed0a5_1600x965.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F436a1b95-5fee-4a9a-b4c6-ea60b60ed0a5_1600x965.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F436a1b95-5fee-4a9a-b4c6-ea60b60ed0a5_1600x965.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F436a1b95-5fee-4a9a-b4c6-ea60b60ed0a5_1600x965.png 1456w" sizes="100vw" loading="lazy"></img>
+        </picture>
+        <div class="image-link-expand">
+          <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize2">
+            <polyline xmlns="http://www.w3.org/2000/svg" points="15 3 21 3 21 9"></polyline>
+            <polyline xmlns="http://www.w3.org/2000/svg" points="9 21 3 21 3 15"></polyline>
+            <line xmlns="http://www.w3.org/2000/svg" x1="21" x2="14" y1="3" y2="10"></line>
+            <line xmlns="http://www.w3.org/2000/svg" x1="3" x2="10" y1="21" y2="14"></line>
+          </svg>
+        </div>
+      </div>
+    </a>
+  </figure>
+</div>
+<p>The process works as follows:</p>
+<ul>
+  <li>
+    <p>Incrementally updated data is ingested from Postgres to Kafka using Debezium CDC connectors.</p>
+  </li>
+  <li>
+    <p>Apache Hudi, an open-source data processing and storage framework, writes these updates from Kafka to S3. This is the raw data.</p>
+  </li>
+  <li>
+    <p>Next, the raw data is transformed, denormalized (tree traversal and permission data construction), and enriched. </p>
+  </li>
+  <li>
+    <p>The processed data is stored in S3 again or in downstream systems to serve analytics and reporting needs.</p>
+  </li>
+</ul>
+<p>While the final look of the design seems quite straightforward, Notion arrived at it after making several important design decisions.</p>
+<p>Let’s look at a few of them in more detail.</p>
+<h3 class="header-anchor-post">1 - Choosing a Data Repository and Lake
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§choosing-a-data-repository-and-lake" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/choosing-a-data-repository-and-lake" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h3>
+<p>Notion used S3 as a data repository and lake to store both the raw and processed data. Other product-facing data stores such as ElasticSearch, Vector Database, and Key-Value store were downstream of this.</p>
+<p>Choosing S3 was a logical choice since Notion’s Postgres database is based on AWS RDS and its export-to-S3 feature made it easy to bootstrap tables in S3. Also, S3 is proven to store large amounts of data and support data processing engines like Spark at low cost.</p>
+<h3 class="header-anchor-post">2 - Choosing the Processing Engine
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§choosing-the-processing-engine" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/choosing-the-processing-engine" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h3>
+<p>Notion engineering team chose Spark as the main data processing engine. As an open-source framework, it was easy to set up and evaluate.</p>
+<p>There were some key benefits to using Spark:</p>
+<ul>
+  <li>
+    <p>A wide range of built-in functions and UDFs beyond SQL enable complex data processing logic like tree traversal and block data denormalization.</p>
+  </li>
+  <li>
+    <p>Existence of a user-friendly PySpark framework for light use cases and advanced Scala Spark for high-performance, and heavy data processing.</p>
+  </li>
+  <li>
+    <p>Ability to process large-scale data in a distributed manner.</p>
+  </li>
+</ul>
+<h3 class="header-anchor-post">3 - Incremental Ingestion or Snapshot Dump
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§incremental-ingestion-or-snapshot-dump" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/incremental-ingestion-or-snapshot-dump" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h3>
+<p>Based on performance and cost comparisons, Notion went with a hybrid design with more emphasis on incremental ingestion.</p>
+<ul>
+  <li>
+    <p>During normal operations, they ingest and continuously apply changed Postgres data to S3.</p>
+  </li>
+  <li>
+    <p>In rare cases, they take a full Postgres snapshot once to bootstrap tables in S3.</p>
+  </li>
+</ul>
+<p>This was done because the incremental approach ensures fresher data at a lower cost and minimal delay. For example, the incremental approach takes a few minutes to a couple of hours as compared to the snapshot dump taking more than 10 hours and costs twice as much.</p>
+<h3 class="header-anchor-post">4 - Streamline Incremental Ingestion
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§streamline-incremental-ingestion" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/streamline-incremental-ingestion" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h3>
+<p>The Notion engineering team chose the Kafka Debezium CDC (Change Data Capture) connector to publish incrementally changed Postgres data to Kafka. This was done for the scalability, ease of setup, and close integration with the existing infrastructure.</p>
+<p>For ingesting incremental data from Kafka to S3, they chose Apache Hudi. Other options on the table were Apache Iceberg and DataBricks Delta Lake. However, Hudi gave a better performance with Notion’s update-heavy workload along with native integration with Debezium CDC messages.</p>
+<h3 class="header-anchor-post">5 - Ingest Raw Data Before Processing
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§ingest-raw-data-before-processing" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/ingest-raw-data-before-processing" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h3>
+<p>Another interesting decision was to ingest raw Postgres data to S3 without on-the-fly processing.</p>
+<p>This was done to create a single source of truth and simplify debugging across the data pipeline. Once the data is in S3, they perform the transformation, denormalization, and enrichment. The intermediate data is once again stored in S3 and only highly clean, structured, and business-critical data is ingested to downstream analytics systems.</p>
+<h2 class="header-anchor-post">Solving Scaling Challenges of the New Data Lake
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§solving-scaling-challenges-of-the-new-data-lake" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/solving-scaling-challenges-of-the-new-data-lake" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h2>
+<p>Since the data volume at Notion was ever-growing, the engineering team took many steps to tackle the scalability challenges.</p>
+<p>Here are a few important ones to understand.</p>
+<h3 class="header-anchor-post">1 - CDC Connector and Kafka
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§cdc-connector-and-kafka" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/cdc-connector-and-kafka" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h3>
+<p>They set up one Debezium CDC connector per Postgres host and deployed them in an AWS EKS cluster. </p>
+<p>For reference, the diagram below shows how CDC with Debezium and Kafka works on a high level.</p>
+<div class="captioned-image-container">
+  <figure>
+    <a class="image-link image2 is-viewable-imag" target="_blank" href="https://substackcdn.com/image/fetch/f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd93bbb86-ae6d-4a90-a818-6379a56f8792_1600x1005.png" data-component-name="Image2ToDOM" rel="">
+      <div class="image2-inset">
+        <picture>
+          <source type="image/webp" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd93bbb86-ae6d-4a90-a818-6379a56f8792_1600x1005.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd93bbb86-ae6d-4a90-a818-6379a56f8792_1600x1005.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd93bbb86-ae6d-4a90-a818-6379a56f8792_1600x1005.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd93bbb86-ae6d-4a90-a818-6379a56f8792_1600x1005.png 1456w" sizes="100vw"></source>
+          <img src="https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd93bbb86-ae6d-4a90-a818-6379a56f8792_1600x1005.png" width="1456" height="915" data-attrs="{&#34;src&#34;:&#34;https://substack-post-media.s3.amazonaws.com/public/images/d93bbb86-ae6d-4a90-a818-6379a56f8792_1600x1005.png&#34;,&#34;srcNoWatermark&#34;:null,&#34;fullscreen&#34;:null,&#34;imageSize&#34;:null,&#34;height&#34;:915,&#34;width&#34;:1456,&#34;resizeWidth&#34;:null,&#34;bytes&#34;:null,&#34;alt&#34;:null,&#34;title&#34;:null,&#34;type&#34;:null,&#34;href&#34;:null,&#34;belowTheFold&#34;:true,&#34;topImage&#34;:false,&#34;internalRedirect&#34;:null,&#34;isProcessing&#34;:false}" class="sizing-normal" alt="" srcset="https://substackcdn.com/image/fetch/w_424,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd93bbb86-ae6d-4a90-a818-6379a56f8792_1600x1005.png 424w, https://substackcdn.com/image/fetch/w_848,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd93bbb86-ae6d-4a90-a818-6379a56f8792_1600x1005.png 848w, https://substackcdn.com/image/fetch/w_1272,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd93bbb86-ae6d-4a90-a818-6379a56f8792_1600x1005.png 1272w, https://substackcdn.com/image/fetch/w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fd93bbb86-ae6d-4a90-a818-6379a56f8792_1600x1005.png 1456w" sizes="100vw" loading="lazy"></img>
+        </picture>
+        <div class="image-link-expand">
+          <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize2">
+            <polyline xmlns="http://www.w3.org/2000/svg" points="15 3 21 3 21 9"></polyline>
+            <polyline xmlns="http://www.w3.org/2000/svg" points="9 21 3 21 3 15"></polyline>
+            <line xmlns="http://www.w3.org/2000/svg" x1="21" x2="14" y1="3" y2="10"></line>
+            <line xmlns="http://www.w3.org/2000/svg" x1="3" x2="10" y1="21" y2="14"></line>
+          </svg>
+        </div>
+      </div>
+    </a>
+  </figure>
+</div>
+<p>Also, there is one Kafka topic per Postgres table, and all connectors consuming from 480 shards write to the same topic for that table. This approach simplified downstream Hudi ingestion to S3 by reducing the complexity of maintaining 480 separate topics for each table.</p>
+<h3 class="header-anchor-post">2 - Hudi Setup
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§hudi-setup" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/hudi-setup" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h3>
+<p>The Notion engineering team used Apache Hudi Deltastreamer (Spark-based) to consume Kafka messages and replicate Postgres tables in S3. They utilized COPY_ON_WRITE Hudi table type with UPSERT operation to support the update-heavy workload.</p>
+<p>Some key optimizations were as follows:</p>
+<ul>
+  <li>
+    <p>Partitioned data using the Postgres shard scheme (i.e. 480 shards).</p>
+  </li>
+  <li>
+    <p>Sorted data based on the last updated time (event_lsn)</p>
+  </li>
+  <li>
+    <p>Set index type to bloom filter.</p>
+  </li>
+</ul>
+<h3 class="header-anchor-post">3 - Spark Data Processing Setup
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§spark-data-processing-setup" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/spark-data-processing-setup" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h3>
+<p>They used PySpark for the majority of data processing jobs because of its low learning curve and accessibility to team members. For tasks like tree traversal and denormalization, they utilized Scala Spark.</p>
+<p>A key optimization was to manage data by handling large and small shards differently. Small shards were loaded entirely into memory whereas large shards were managed through disk reshuffling. Also, to optimize runtime and efficiency, they implemented multi-threading and parallel processing for 480 shards.</p>
+<h3 class="header-anchor-post">4 - Bootstrap Setup
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§bootstrap-setup" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/bootstrap-setup" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h3>
+<p>The bootstrap setup works as follows:</p>
+<ul>
+  <li>
+    <p>To bootstrap new tables, they first set up a Debezium Connector to ingest Postgres changes to Kafka. </p>
+  </li>
+  <li>
+    <p>They start the AWS RDS export-to-S3 job from a specific timestamp to save the latest snapshot of Postgres tables to S3. </p>
+  </li>
+  <li>
+    <p>Next, they create a Spark job to read the data from S3 and write them to the Hudi table format.</p>
+  </li>
+</ul>
+<p>To maintain data completeness and integrity, all changes made during the snapshotting process are captured by setting up Deltastreamer to read Kafka messages from the specific timestamp.</p>
+<h2 class="header-anchor-post">Conclusion
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§conclusion" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/conclusion" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h2>
+<p>Notion’s data lake infrastructure project development started in the spring of 2022 and was completed by the fall. It has been a huge success for them in terms of cost and reliability.</p>
+<p>Some key benefits have been as follows:</p>
+<ul>
+  <li>
+    <p>Over $1 million in cost savings in 2022. Proportionally higher savings in 2023 and 2024.</p>
+  </li>
+  <li>
+    <p>Ingestion time reduced from 1+ day to minutes/hours</p>
+  </li>
+  <li>
+    <p>Re-sync is possible within 24 hours without overloading databases.</p>
+  </li>
+  <li>
+    <p>Accommodate Notion’s 6-12 month data doubling rate.</p>
+  </li>
+  <li>
+    <p>Enabled successful rollout of Notion AI features in the year 2023-2024.</p>
+  </li>
+</ul>
+<p>
+  <strong>References:</strong>
+</p>
+<ul>
+  <li>
+    <p>
+      <a href="https://www.notion.so/blog/building-and-scaling-notions-data-lake" rel="">Building and Scaling Notion’s Data Lake</a>
+    </p>
+  </li>
+  <li>
+    <p>
+      <a href="https://www.notion.so/blog/data-model-behind-notion" rel="">The data model behind Notion’s flexibility</a>
+    </p>
+  </li>
+  <li>
+    <p>
+      <a href="https://www.notion.so/blog/sharding-postgres-at-notion" rel="">Herding Elephants: Lessons learned from sharding Postgres at Notion</a>
+    </p>
+  </li>
+</ul>
+<div>
+  <hr></hr>
+</div>
+<h2 class="header-anchor-post">SPONSOR US
+  <div class="pencraft pc-display-flex pc-alignItems-center pc-position-absolute pc-reset header-anchor-parent">
+    <div class="pencraft pc-display-contents pc-reset _pubTheme_1msvp_1">
+      <div id="§sponsor-us" class="pencraft pc-reset header-anchor offset-top"></div>
+      <button tabindex="0" type="button" data-href="https://blog.bytebytego.com/i/151321822/sponsor-us" class="pencraft pc-reset pencraft _iconButton2_1xogk_655 _iconButtonBase_1xogk_162 _buttonBase_1xogk_1 _buttonNew_1xogk_93 _size_sm_1xogk_137 _priority_secondary_1xogk_42">
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link">
+          <path xmlns="http://www.w3.org/2000/svg" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path xmlns="http://www.w3.org/2000/svg" d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</h2>
+<p>Get your product in front of more than 1,000,000 tech professionals.</p>
+<p>Our newsletter puts your products and services directly in front of an audience that matters - hundreds of thousands of engineering leaders and senior engineers - who have influence over significant tech decisions and big purchases.</p>
+<p>Space Fills Up Fast - Reserve Today</p>
+<p>
+  <span>Ad spots typically sell out about 4 weeks in advance. To ensure your ad reaches this influential audience, reserve your space now by emailing </span>
+  <strong>
+    <a href="mailto:sponsorship@bytebytego.com" rel="">sponsorship@bytebytego.com</a>
+  </strong>
+</p>
