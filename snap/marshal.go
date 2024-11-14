@@ -8,7 +8,7 @@ import (
 
 type JSON struct{}
 
-type TXT struct{}
+type TXT struct{ Extension string }
 
 func (JSON) Marshal(v any) ([]byte, error) {
 	bs, err := json.MarshalIndent(v, "", "  ")
@@ -45,4 +45,9 @@ func (TXT) Unmarshal(bs []byte, v any) error {
 	}
 }
 
-func (TXT) Ext() string { return ".txt" }
+func (t TXT) Ext() string {
+	if t.Extension != "" {
+		return t.Extension
+	}
+	return ".txt"
+}
