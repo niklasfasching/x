@@ -25,7 +25,7 @@ type Conn struct {
 
 type Msg struct {
 	ID     string
-	Offset int
+	Offset int64
 	Data   []byte
 }
 
@@ -101,7 +101,7 @@ func (c *Conn) Close() error {
 }
 
 func (m *Msg) ReadAt(bs []byte, off int64) (int, error) {
-	i := int(off - int64(m.Offset))
+	i := int(off - m.Offset)
 	if i >= len(m.Data) {
 		return 0, io.EOF
 	}
@@ -128,6 +128,6 @@ func (p *Pool) GetMsg(id string) (*Msg, error) {
 	} else if offset, bs, err := Decode(bs); err != nil {
 		return nil, err
 	} else {
-		return &Msg{id, offset, bs}, nil
+		return &Msg{id, int64(offset), bs}, nil
 	}
 }
