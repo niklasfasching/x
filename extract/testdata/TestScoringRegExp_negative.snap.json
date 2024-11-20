@@ -1,0 +1,21 @@
+{
+  "header": {
+    "header": 2
+  },
+  "header-body": {
+    "header": 2
+  },
+  "nav": {
+    "nav": 2
+  },
+  "navigation": {
+    "navigation": 2
+  },
+  "share-body": {
+    "share": 1
+  },
+  "share-footer": {
+    "footer": 2,
+    "share": 1
+  }
+}

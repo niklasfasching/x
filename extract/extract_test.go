@@ -11,6 +11,29 @@ import (
 	"github.com/niklasfasching/x/soup"
 )
 
+func TestScoringRegExp(t *testing.T) {
+	t.Run("positive", func(t *testing.T) {
+		s := snap.New(t, snap.JSON{})
+		vs := []string{"main-body", "main-main", "post-content", "post", "main", "content", "some-content"}
+
+		for _, v := range vs {
+			m := map[string]int{}
+			PositiveAttrs.Match(v, m, 1)
+			s.Snap(t, v, m)
+		}
+	})
+	t.Run("negative", func(t *testing.T) {
+		s := snap.New(t, snap.JSON{})
+		vs := []string{"header", "header-body", "nav", "navigation", "share-body", "share-footer"}
+
+		for _, v := range vs {
+			m := map[string]int{}
+			NegativeAttrs.Match(v, m, 1)
+			s.Snap(t, v, m)
+		}
+	})
+}
+
 func TestDocument(t *testing.T) {
 	m, urls := snap.TXT{Extension: ".html"}, []string{
 		"https://de.wikipedia.org/wiki/Go_(Programmiersprache)",                                                                // wiki
@@ -32,11 +55,11 @@ func extractContent(t *testing.T, url string) string {
 	if err != nil {
 		t.Fatal("load", err)
 	}
-	d := &Document{Node: n, URL: url}
-	if err := d.Parse(); err != nil {
+	title, content, err := Content(url, n)
+	if err != nil {
 		t.Fatal("parse", err)
 	}
-	return format(t, "<h1>"+d.Title+"</h1>"+d.Content)
+	return format(t, "<h1>"+title+"</h1>"+content)
 }
 
 func load(url string) (*soup.Node, error) {

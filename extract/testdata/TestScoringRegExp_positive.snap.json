@@ -1,0 +1,25 @@
+{
+  "content": {
+    "content": 2
+  },
+  "main": {
+    "main": 2
+  },
+  "main-body": {
+    "body": 2,
+    "main": 2
+  },
+  "main-main": {
+    "main": 2
+  },
+  "post": {
+    "post": 3
+  },
+  "post-content": {
+    "content": 2,
+    "post": 3
+  },
+  "some-content": {
+    "content": 2
+  }
+}
