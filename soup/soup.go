@@ -28,6 +28,8 @@ func Load(client *http.Client, url string) (*Node, error) {
 	res, err := client.Get(url)
 	if err != nil {
 		return nil, err
+	} else if res.StatusCode >= 300 {
+		return nil, fmt.Errorf("status: %d", res.StatusCode)
 	}
 	defer res.Body.Close()
 	return Parse(res.Body)
