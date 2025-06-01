@@ -38,7 +38,7 @@ func Decode(bs []byte) (int, []byte, error) {
 			case "=yend": // size, crc32, pcrc32
 				if h := strings.ToLower(strings.TrimLeft(m["pcrc32"], "0")); h != "" {
 					if hc := fmt.Sprintf("%x", pcrc.Sum32()); h != hc {
-						return -1, nil, fmt.Errorf("%s != %x", h, hc)
+						return -1, nil, fmt.Errorf("h=%s != pcrc32=%x (%v)", h, hc, m)
 					}
 				}
 				pcrc.Reset()
