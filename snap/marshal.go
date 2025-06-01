@@ -11,8 +11,12 @@ type JSON struct{}
 type TXT struct{ Extension string }
 
 func (JSON) Marshal(v any) ([]byte, error) {
-	bs, err := json.MarshalIndent(v, "", "  ")
-	return bytes.ReplaceAll(bs, []byte("\\n"), []byte("\n\t")), err
+	w := &bytes.Buffer{}
+	e := json.NewEncoder(w)
+	e.SetEscapeHTML(false)
+	e.SetIndent("", "  ")
+	err := e.Encode(v)
+	return bytes.ReplaceAll(w.Bytes(), []byte("\\n"), []byte("\n\t")), err
 }
 
 func (JSON) Unmarshal(bs []byte, v any) error {
