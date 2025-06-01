@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/niklasfasching/x/css"
+	"github.com/niklasfasching/x/format/css"
 	"golang.org/x/net/html"
 )
 
