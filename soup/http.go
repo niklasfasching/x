@@ -119,7 +119,11 @@ func (c *FileCache) Get(k string, req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	bs = bytes.SplitN(bs, []byte("\n"), 2)[1]
+	vs := bytes.SplitN(bs, []byte("\n"), 2)
+	if len(vs) != 2 {
+		return nil, fmt.Errorf("invalid cache entry")
+	}
+	bs = vs[1]
 	res, err := http.ReadResponse(bufio.NewReader(bytes.NewReader(bs)), req)
 	if err != nil {
 		return nil, err

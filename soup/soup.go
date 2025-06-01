@@ -27,7 +27,7 @@ func MustParse(r io.Reader) *Node {
 func Load(client *http.Client, url string) (*Node, error) {
 	res, err := client.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("http: %w", err)
 	} else if res.StatusCode >= 300 {
 		return nil, fmt.Errorf("status: %d", res.StatusCode)
 	}
@@ -129,6 +129,19 @@ func (n *Node) Attribute(key string) string {
 		}
 	}
 	return ""
+}
+
+func (n *Node) SetAttribute(key, value string) {
+	if n == nil {
+		return
+	}
+	for i, a := range n.Attr {
+		if a.Key == key {
+			n.Attr[i].Val = value
+			return
+		}
+	}
+	n.Attr = append(n.Attr, html.Attribute{Key: key, Val: value})
 }
 
 func (ns Nodes) Eq(i int) *Node {
