@@ -1,12 +1,12 @@
 package headless
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"reflect"
+	"slices"
 	"sync"
-	"time"
 )
 
 type Session struct {
@@ -14,34 +14,62 @@ type Session struct {
 	targetID               string
 	contextID, uaContextID int
 	h                      *H
-	handlers               map[string][]reflect.Value
+	handlers               map[string][]*Handler
 	bindings               map[string]reflect.Value
 	Err                    chan error
 	sync.Mutex
 	Response
 }
 
-func (s *Session) Handle(method string, f any) {
+type Handler struct {
+	reflect.Value
+	C chan message
+}
+
+func (s *Session) HandleContext(ctx context.Context, method string, f any) {
+	cancel := s.Handle(method, f)
+	<-ctx.Done()
+	cancel()
+}
+
+func (s *Session) Handle(method string, f any) func() {
 	fv := reflect.ValueOf(f)
 	if t := fv.Type(); t.NumIn() != 1 || t.NumOut() != 0 {
 		panic(fmt.Sprintf("handler func must be of type func(T)"))
 	}
+	h := &Handler{fv, make(chan message, 10)}
+	go func() {
+		for m := range h.C {
+			h.Call(m)
+		}
+	}()
 	s.Lock()
-	s.handlers[method] = append(s.handlers[method], fv)
+	s.handlers[method] = append(s.handlers[method], h)
 	s.Unlock()
+	return func() {
+		close(h.C)
+		s.Lock()
+		s.handlers[method] = slices.DeleteFunc(s.handlers[method],
+			func(h2 *Handler) bool { return h == h2 })
+		s.Unlock()
+	}
 }
 
-func (s *Session) Await(method string, timeout time.Duration) error {
-	if timeout < 0 {
-		timeout = math.MaxInt64
-	}
-	done := make(chan struct{})
-	s.Handle(method, func(m any) { done <- struct{}{} })
+func (s *Session) AwaitC(method string) chan struct{} {
+	c, cancel := make(chan struct{}), func() {}
+	cancel = s.Handle(method, func(m any) {
+		close(c)
+		cancel()
+	})
+	return c
+}
+
+func (s *Session) Await(ctx context.Context, method string) error {
 	select {
-	case <-done:
+	case <-s.AwaitC(method):
 		return nil
-	case <-time.NewTimer(timeout).C:
-		return fmt.Errorf("%s: timeout (%s)", method, timeout)
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
@@ -74,6 +102,15 @@ func (s *Session) eval(js string, id int, v any) error {
 	return json.Unmarshal(r.Result.Value, v)
 }
 
+func (s *Session) EvalTempUA(js string, v any) error {
+	r := struct{ ExecutionContextId int }{}
+	params := Params{"frameId": s.targetID, "worldName": s.targetID, "grantUniveralAccess": true}
+	if err := s.Exec("Page.createIsolatedWorld", params, &r); err != nil {
+		return err
+	}
+	return s.eval(js, r.ExecutionContextId, v)
+}
+
 func (s *Session) EvalUA(js string, v any) error {
 	if s.uaContextID == 0 {
 		r := struct{ ExecutionContextId int }{}
@@ -91,18 +128,36 @@ func (s *Session) Close() error {
 }
 
 func (s *Session) Bind(name string, f any) {
-	if err := s.bind(name, f); err != nil {
+	if err := s.bind(name, nil, f); err != nil {
 		panic(err)
 	}
 }
 
-func (s *Session) bind(name string, f any) error {
+func (s *Session) BindUA(name string, f any) {
+	if s.uaContextID == 0 {
+		r := struct{ ExecutionContextId int }{}
+		params := Params{"frameId": s.targetID, "worldName": s.targetID, "grantUniveralAccess": true}
+		if err := s.Exec("Page.createIsolatedWorld", params, &r); err != nil {
+			panic(err)
+		}
+		s.uaContextID = r.ExecutionContextId
+	}
+	if err := s.bind(name, &s.uaContextID, f); err != nil {
+		panic(err)
+	}
+}
+
+func (s *Session) bind(name string, contextId *int, f any) error {
 	fv := reflect.ValueOf(f)
 	ft := fv.Type()
 	s.Lock()
 	s.bindings[name] = fv
 	s.Unlock()
-	if err := s.Exec("Runtime.addBinding", Params{"name": name}, nil); err != nil {
+	params := Params{"name": name}
+	if contextId != nil {
+		params["executionContextId"] = *contextId
+	}
+	if err := s.Exec("Runtime.addBinding", params, nil); err != nil {
 		return err
 	}
 	js := fmt.Sprintf(`(() => {
@@ -123,7 +178,7 @@ func (s *Session) bind(name string, f any) error {
 	if err := s.Exec("Page.addScriptToEvaluateOnNewDocument", Params{"source": js}, nil); err != nil {
 		return err
 	}
-	return s.Eval(js, nil)
+	return s.eval(js, *contextId, nil)
 }
 
 func (s *Session) onBindingCalled(m struct{ Name, Payload string }) {
@@ -194,4 +249,12 @@ func callBoundFunc(fv reflect.Value, args []json.RawMessage) (any, error) {
 		return nil, err.(error)
 	}
 	return rvs[0].Interface(), nil
+}
+
+func (h *Handler) Call(m message) {
+	av := reflect.New(h.Type().In(0))
+	if err := json.Unmarshal(m.Params, av.Interface()); err != nil {
+		panic(fmt.Errorf("could not marshal %s into %T", string(m.Params), av.Interface()))
+	}
+	h.Value.Call([]reflect.Value{av.Elem()})
 }

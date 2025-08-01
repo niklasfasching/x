@@ -2,12 +2,15 @@ package headless
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 )
@@ -46,6 +49,7 @@ type message struct {
 
 var Executable = "chromium-browser"
 
+var debugPrefix = os.Getenv("DEBUG_PREFIX")
 var debug = os.Getenv("DEBUG") != ""
 var defaultBrowserArgs = map[string]any{
 	"--remote-debugging-pipe": true,
@@ -87,6 +91,9 @@ func Start(args map[string]any) (*H, error) {
 	}
 	cmd := exec.Command(Executable, mergedArgs...)
 	cmd.ExtraFiles = append(cmd.ExtraFiles, ir, ow)
+	if debug {
+		cmd.Stderr = os.Stderr
+	}
 	h := &H{
 		pipe:     pipe{or, iw, bufio.NewReader(or)},
 		cmd:      cmd,
@@ -123,7 +130,7 @@ func (h *H) Stop() error {
 	return err
 }
 
-func (h *H) Open(url string) (*Session, error) {
+func (h *H) Open(url string, f func(*Session) error) (*Session, error) {
 	cr := struct{ TargetId string }{}
 	if err := h.Exec("Target.createTarget", Params{"url": url}, &cr); err != nil {
 		return nil, err
@@ -137,16 +144,26 @@ func (h *H) Open(url string) (*Session, error) {
 		targetID:  cr.TargetId,
 		contextID: 1,
 		h:         h,
-		handlers:  map[string][]reflect.Value{},
+		handlers:  map[string][]*Handler{},
 		bindings:  map[string]reflect.Value{},
 		Err:       make(chan error),
 	}
 	h.Lock()
 	h.sessions[ar.SessionId] = s
 	h.Unlock()
-	for _, domain := range []string{"Page", "Runtime", "Network"} {
+	c := make(chan error)
+	if f == nil {
+		close(c)
+	} else {
+		go func() { c <- f(s) }()
+	}
+	return s, errors.Join(s.Init(), <-c)
+}
+
+func (s *Session) Init() error {
+	for _, domain := range []string{"Page", "Runtime"} {
 		if err := s.Exec(domain+".enable", nil, nil); err != nil {
-			return nil, err
+			return err
 		}
 	}
 	s.Handle("Runtime.bindingCalled", s.onBindingCalled)
@@ -165,29 +182,36 @@ func (h *H) Open(url string) (*Session, error) {
 			s.contextID = p.Context.Id
 		}
 	})
-	type NetworkResponseReceived struct {
-		Type, FrameId string
-		Response      Response
-	}
-	s.Handle("Network.responseReceived", func(p NetworkResponseReceived) {
-		if p.FrameId == s.targetID && p.Type == "Document" {
-			s.Response = p.Response
-		}
-	})
-	return s, nil
+	return nil
 }
 
-func (h *H) Capture(url string, timeout time.Duration) (*Response, string, error) {
-	s, err := h.Open(url)
+func (h *H) Capture(ctx context.Context, url string) (*Response, string, error) {
+	s, err := h.Open(url, nil)
 	if err != nil {
 		return nil, "", err
 	}
 	defer s.Close()
-	if err := s.Await("Page.loadEventFired", timeout); err != nil {
+	if err := s.Exec("Page.setLifecycleEventsEnabled", Params{"enabled": true}, nil); err != nil {
 		return nil, "", err
 	}
-
+	if err := s.Await(ctx, "Page.loadEventFired"); err != nil {
+		return nil, "", err
+	}
+	interactiveCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	s.Handle("Page.lifecycleEvent", func(v struct{ Name string }) {
+		if v.Name == "InteractiveTime" {
+			cancel()
+		}
+	})
+	<-interactiveCtx.Done()
 	r := struct{ Data string }{}
+	// https://issues.chromium.org/issues/40495614
+	s.Eval(`document.querySelectorAll("script[type*='ld+json']").forEach(el => {
+      document.head.append(Object.assign(document.createElement("meta"), {
+        name: el.type, content: el.innerText,
+      }))
+    })`, nil)
 	err = s.Exec("Page.captureSnapshot", nil, &r)
 	return &s.Response, r.Data, err
 }
@@ -228,6 +252,8 @@ func (h *H) exec(sessionID, method string, params, v interface{}) error {
 	}
 	if debug {
 		log.Println("->", string(bs))
+	} else if debugPrefix != "" && strings.HasPrefix(method, debugPrefix) {
+		log.Println("->", string(bs))
 	}
 	if err := h.send(bs); err != nil {
 		return err
@@ -239,6 +265,19 @@ func (h *H) exec(sessionID, method string, params, v interface{}) error {
 			return fmt.Errorf("%s", string(r.Error))
 		}
 		return fmt.Errorf("%v: %v (%v)", e["code"], e["message"], e["data"])
+	}
+	e := struct {
+		Description      string
+		ExceptionDetails struct {
+			LineNumber, ColumnNumber int
+			Exception                struct {
+				Description string
+			}
+		}
+	}{}
+	if err := json.Unmarshal(r.Result, &e); err == nil && e.ExceptionDetails.Exception.Description != "" {
+		d := e.ExceptionDetails
+		return fmt.Errorf("%d:%d: %s", d.LineNumber, d.ColumnNumber, d.Exception.Description)
 	}
 	if v == nil {
 		return nil
@@ -256,12 +295,6 @@ func (h *H) send(bs []byte) error {
 }
 
 func (h *H) loop() error {
-	c := make(chan func(), 100)
-	go func() {
-		for f := range c {
-			f()
-		}
-	}()
 	for {
 		bs, err := h.pipe.ReadBytes(0)
 		if err != nil {
@@ -282,6 +315,8 @@ func (h *H) loop() error {
 		}
 		if debug {
 			log.Println("<-", string(bs))
+		} else if debugPrefix != "" && strings.HasPrefix(m.Method, debugPrefix) {
+			log.Println("<-", string(bs))
 		}
 		if m.Method != "" {
 			h.Lock()
@@ -291,17 +326,13 @@ func (h *H) loop() error {
 				continue
 			}
 			s.Lock()
-			hvs := s.handlers[m.Method]
+			hs := s.handlers[m.Method]
 			s.Unlock()
-			for _, hv := range hvs {
-				av := reflect.New(hv.Type().In(0))
-				if err := json.Unmarshal(m.Params, av.Interface()); err != nil {
-					return fmt.Errorf("could not marshal %s into %T", string(m.Params), av.Interface())
-				}
+			for _, h := range hs {
 				select {
-				case c <- func() { hv.Call([]reflect.Value{av.Elem()}) }:
-				case <-time.After(10 * time.Second):
-					panic(fmt.Sprintf("cannot enqueue %s", string(m.Params)))
+				case h.C <- m:
+				default:
+					log.Printf("could not enqueue %s %s", m.Method, string(m.Params))
 				}
 			}
 		} else {
