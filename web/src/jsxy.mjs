@@ -1,52 +1,6 @@
-const attrs = new Set("list", "form", "selected"), subs = new Map();
-let hooks, hookKey, hookIndex, oldSearch, oldHash, style;
-
-export const directives = {
-  store: applyStoreDirective,
-  href: applyHrefDirective,
-  intersect: applyIntersectDirective,
-}
-
-export const db = new Proxy(localStorage, {
-  get: (t, k) => JSON.parse(t.getItem(k)),
-  set: (t, k, v) => {
-    t.setItem(k, JSON.stringify(v));
-    if (!publish.active) publish(db, k, v);
-    return true;
-  },
-  deleteProperty: (t, k) => (t.removeItem(k), true),
-  ownKeys: (t) => Reflect.ownKeys(t),
-  getOwnPropertyDescriptor: (t, k) => Reflect.getOwnPropertyDescriptor(t, k),
-});
-
-export const query = new Proxy(searchParams, {
-  get: (t, k) => {
-    const v = t()[1].get(k);
-    return v && (v[0] === "[" || v[0] === "{") ? JSON.parse(v) : v;
-  },
-  set: (t, k, v) => {
-    const [path, q] = t(), sv = Object(v) === v ? JSON.stringify(v) : v;
-    q[sv != null && sv !== "" ? "set" : "delete"](k, sv);
-    history.replaceState(null, "", "?"+path+(q.size ? "&"+q : "")+location.hash);
-    if (!publish.active) publish(query, k, v);
-    return true;
-  },
-  deleteProperty: (t, k) => (query[k] = undefined, true),
-  ownKeys: (t) => [...t().keys()],
-  getOwnPropertyDescriptor: (t, k) => ({enumerable: 1, configurable: 1}),
-});
-
-export function sub(store, k, f) {
-  if (!subs.has(store)) subs.set(store, {});
-  subs.get(store)[k] = [f].concat(subs.get(store)[k] || []);
-  return () => subs.get(store)[k] = subs.get(store)[k].filter(x => x !== f);
-}
-
-function publish(store, k, v) {
-  publish.active = true;
-  if (subs.get(store) && k in subs.get(store)) for (let f of subs.get(store)[k]) f(v);
-  delete publish.active;
-}
+// TODO: pass children as prop in renderChild to fns
+const attrs = new Set("list", "form", "selected");
+let ctx, style;
 
 export function html(strings, ...values) {
   let $ = "child", xs = [{children: []}], tmp = "";
@@ -75,7 +29,6 @@ export function html(strings, ...values) {
           else if (k[0] === "#") v && (props.id = k.slice(1));
           else if (k[0] === "$") v && (x.ref = k.slice(1));
           else if (k[0] === "-" && k[1] === "-") props.style = (props.style || "") + `;${k}:${v};`;
-          else if (k[0] === ":") x.dirs = {...x.dirs, [k]: v}
           else props[k] = v;
         }
         x.props = props;
@@ -103,7 +56,6 @@ export function html(strings, ...values) {
       }
       tmp = "";
     }
-
     let v = values.shift();
     if ($ !== "child" && v != null && v !== false) {
       tmp = tmp ? tmp + v : v;
@@ -116,7 +68,6 @@ export function html(strings, ...values) {
       else if (v != null && v !== false) xs[xs.length-1].children.push(v);
     }
   }
-
   const children = xs.pop().children;
   if (tmp.trim()) {
     throw new Error(`leftovers: '${tmp}'`);
@@ -133,96 +84,105 @@ export function css(strings, ...values) {
   style.innerHTML += String.raw(strings, ...values);
 }
 
-export function useState(initialValue) {
-  return getHook({value: initialValue}).value;
+export function useState(value) {
+  return getHook({value}).value;
 }
 
-export function useEffect(mount, args = []) {
-  const hook = getHook({});
-  hook.changed = !hook.args || hook.args.some((a, i) => a !== args[i]);
-  hook.args = args, hook.mount = mount;
+export function useEffect(mount, deps = []) {
+  const h = getHook({mount}), changed = !h.deps || !h.vnode || h.vnode.node !== ctx.node || h.deps.some((v, i) => v !== deps[i]);
+  if (changed) ctx.queue.push(async () => h.unmount = await (h.unmount?.(), h.mount()));
+  h.vnode = ctx.vnode, h.deps = deps;
+}
+
+export function useAsync(f, deps = []) {
+  const h = getHook({loading: true}), vnode = ctx.vnode, changed = !h.deps || h.deps.some((v, i) => v !== deps[i]);
+  if (changed) f().then((v) => h.value = v, (err) => h.err = err).then(() => { delete h.loading, render(vnode) });
+  h.deps = deps;
+  return h;
+}
+
+export function useRoute(f) {
+  route.hooks[ctx.k] = f;
+  if (history.state?.scrollTop) ctx.queue.push(() => f().scrollTop = history.state.scrollTop)
 }
 
 export function getHook(v) {
-  if (!hookKey) throw new Error(`getting hook from unkeyed component`);
-  if (!hooks[hookKey]) hooks[hookKey] = [];
-  let keyHooks = hooks[hookKey], hook = keyHooks[hookIndex++];
-  return hook ? hook : keyHooks[keyHooks.push(v) - 1];
+  if (!ctx.k) throw new Error(`getHook from unkeyed component`);
+  if (!ctx.parentNode.hooks[ctx.k]) ctx.parentNode.hooks[ctx.k] = [];
+  const khs = ctx.parentNode.hooks[ctx.k], h = khs[ctx.i++];
+  if (!ctx.parentNode.newHooks[ctx.k]) ctx.parentNode.newHooks[ctx.k] = khs;
+  return h ? h : khs[khs.push(v) - 1];
 }
 
 export function render(vnode, parentNode) {
   if (parentNode) return void renderChildren(parentNode, vnode, vnode);
   vnode = vnode.self || vnode.component || vnode;
-  hooks = vnode.node.parentNode.hooks;
+  if (!vnode.node) return renderChild(document.createElement("div"), vnode);
   renderChild(vnode.node.parentNode, vnode, vnode.node, vnode);
 }
 
 function renderChildren(parentNode, vnodes, component, ns) {
   if (!Array.isArray(vnodes)) vnodes = [vnodes];
-  let oldHooks = parentNode.hooks || {}, newHooks = {}, nodes = [...parentNode.childNodes];
-  hooks = oldHooks, parentNode.hooks = newHooks;
-  for (let i = 0; i < vnodes.length; i++) {
-    renderChild(parentNode, vnodes[i], nodes[i], component, ns);
+  if (!parentNode.hooks) parentNode.hooks = {};
+  let nodes = [...parentNode.childNodes], end = vnodes.length;
+  parentNode.newHooks = {};
+  for (let i = 0; i < end; i++) {
+    let vnode = vnodes[i], node = nodes[i], tag = node?.vnode?.ctag || node?.vnode?.tag;
+    if (tag && vnode.tag !== tag) end = i;
+    else renderChild(parentNode, vnode, node, component, null, ns);
   }
-  for (let k in oldHooks) {
-    if (!(k in newHooks)) for (let h of oldHooks[k]) h.unmount?.();
+  for (let i = vnodes.length - 1, j = end; i >= end; i--, j++) {
+    renderChild(parentNode, vnodes[i], nodes[j], component, nodes[end], ns);
   }
-  for (let i = nodes.length-1; i >= vnodes.length; i--) {
-    unmount(nodes[i]).remove()
+  for (let k in parentNode.hooks) {
+    if (!(k in parentNode.newHooks)) for (let h of parentNode.hooks[k]) h.unmount?.();
   }
+  parentNode.hooks = parentNode.newHooks;
+  for (let i = nodes.length-1; i >= vnodes.length; i--) unmount(nodes[i], true);
 }
 
-function renderChild(parentNode, vnode, node, component, ns) {
-  if (vnode == null) return node ? void unmount(node).remove() : null;
-  if (!vnode.tag) return createTextNode(parentNode, vnode, node);
-  if (typeof vnode.tag !== "function") {
+function renderChild(parentNode, vnode, node, component, refNode, ns) {
+  if (vnode == null) return unmount(node, true);
+  else if (vnode instanceof HTMLElement) replaceNode(parentNode, vnode, node, refNode);
+  else if (!vnode.tag) return createTextNode(parentNode, vnode, node, refNode);
+  else if (typeof vnode.tag !== "function") {
     ns = vnode.props?.xmlns || ns
-    if (!node || vnode.tag !== node.vnode?.tag) node = createNode(parentNode, vnode.tag, node, ns);
-    if (vnode.ref) component.props.$[vnode.ref] = node;
-    if (vnode.props || node.vnode?.props) setProperties(node, vnode, component, ns);
-    vnode.node = node, node.vnode = vnode, node.component = component;
+    if (!node || vnode.tag !== node.vnode?.tag) node = createNode(parentNode, vnode.tag, node, refNode, ns);
     renderChildren(node, vnode.children, component, ns);
-    if (vnode.dirs) applyDirectives(node, vnode)
-    return node;
-  }
-  vnode.props.$ = {self: vnode, app: component.props?.$?.app || component};
-  hookIndex = 0, hookKey = vnode.props.key || vnode.props.id;
-  const _hooks = hooks, _vnode = vnode.tag(vnode.props), _vnodeHooks = _hooks[vnode.props.key];
-  node = vnode.node = renderChild(parentNode, _vnode, node, vnode, ns), hooks = _hooks;
-  if (_vnodeHooks) {
-    parentNode.hooks[vnode.props.key] = _vnodeHooks;
-    for (let h of _vnodeHooks) {
-      if (h.mount && (h.changed || h.node !== node)) {
-        if (h.unmount) h.unmount();
-        h.unmount = h.mount(node), h.node = node, h.changed = false;
-      }
-    }
+    setProperties(node, vnode, component, ns);
+  } else {
+    renderChildren(node, vnode.children, component, ns);
+    vnode.props.$ = {self: vnode, app: component.props.$?.app || component};
+    ctx = {parentNode, node, vnode, i: 0, k: vnode.props.key || vnode.props.id, queue: []};
+    let _vnode = vnode.tag(vnode.props), _ctx = ctx;
+    _vnode.ctag = vnode.tag, node = renderChild(parentNode, _vnode, node, vnode, refNode, ns), vnode.node = node;
+    for (let f of _ctx.queue) f();
   }
   if (vnode.ref) component.props.$[vnode.ref] = node;
   return node;
 }
 
-function unmount(node) {
-  for (let k in node.hooks) {
-    for (let h of node.hooks[k]) h.unmount?.();
-  }
+function unmount(node, rm) {
+  if (!node) return;
+  else if (!rm) for (let k in node.hooks) for (let h of node.hooks[k]) h.unmount?.();
   for (let child of node.childNodes) unmount(child);
-  return node;
+  if (rm) node.remove();
 }
 
-function createNode(parentNode, tag, node, ns) {
+function createNode(parentNode, tag, node, refNode, ns) {
   const newNode = ns ? document.createElementNS(ns, tag) : document.createElement(tag);
-  return replaceNode(parentNode, newNode, node);
+  return replaceNode(parentNode, newNode, node, refNode);
 }
 
-function createTextNode(parentNode, vnode, node) {
+function createTextNode(parentNode, vnode, node, refNode) {
   if (node?.nodeType === 3) node.data = vnode;
-  else node = replaceNode(parentNode, document.createTextNode(vnode), node);
+  else node = replaceNode(parentNode, document.createTextNode(vnode), node, refNode);
   return node;
 }
 
-function replaceNode(parentNode, newNode, oldNode) {
+function replaceNode(parentNode, newNode, oldNode, refNode) {
   if (oldNode) unmount(oldNode), parentNode.replaceChild(newNode, oldNode);
+  else if (refNode) parentNode.insertBefore(newNode, refNode);
   else parentNode.append(newNode);
   return newNode;
 }
@@ -236,19 +196,21 @@ function setProperties(node, vnode, component, ns) {
       if (!vnode.props || !(k in vnode.props)) setProperty(node, k, "");
     }
   }
+  vnode.node = node, node.vnode = vnode, node.component = component;
 }
 
 function setProperty(node, k, v, ns) {
-  if (k[0] == "o" && k [1] == "n") setEventListener(node, k.slice(2), eventListener, eventListener);
-  else if (k[0] === "@") setEventListener(node, k.slice(1), eventListener, eventListener);
+  if (k[0] == "o" && k [1] == "n") setEventListener(node, k.slice(2), v);
+  else if (k[0] === "@") setEventListener(node, k.slice(1), v);
+  else if (k[0] === "!") node[k.slice(1)] = v;
   else if (k in node && !attrs.has(k) && !ns) node[k] = v == null ? "" : v;
   else if (v == null || v === false) node.removeAttribute(k);
   else node.setAttribute(k, v);
 }
 
-function setEventListener(node, type, f, g) {
-  if (g) node.removeEventListener(type, g);
-  if (f) node.addEventListener(type, f);
+function setEventListener(node, type, v) {
+  if (v) node.addEventListener(type, eventListener);
+  else node.removeEventListener(type, eventListener);
 }
 
 function eventListener(e) {
@@ -259,95 +221,41 @@ function eventListener(e) {
   if (props["@"+e.type]) render(e.target.component);
 }
 
-function applyDirectives(node, vnode) {
-  for (const dk in vnode.dirs) {
-    const [_, k, ...args] = dk.split(":"), f = directives[k], v = vnode.dirs[dk];
-    if (f) node.dataset[k] = f(node, vnode, args, v, node.dataset[k]);
-  }
-}
-
-function applyStoreDirective(node, {tag, props}, [type, key], v, data) {
-  const store = {query, db}[type];
-  if (tag !== "form") throw new Error(`:store on non-form tag '${tag}'`)
-  else if (!key || !store) throw new Error("bad key or type in :store:<type>:<key>");
-  if (!data) {
-    node.addEventListener("submit", (e) => e.preventDefault());
-    node.addEventListener("reset", (e) => delete store[key]);
-    node.addEventListener("input", (e) => {
-      const fd = new FormData(node), m = {};
-      iterateForm(node, (k, el, k2) => {
-        const vs = fd.getAll(k);
-        if (!k2) m[k] = vs[0];
-        else if (vs.length) m[k] = Object.fromEntries(vs.map(k => [k, true]));
-      });
-      store[key] = m;
-    });
-  }
-  const m = store[key];
-  iterateForm(node, (k, el, k2) => {
-    const v = m && m[k];
-    if (k2) for (const x of el) x[k2] = v && v[x.value];
-    else if (el.type === "checkbox") el.checked = v;
-    else el.value = v == null ? "" : v;
-  });
-  return true;
-}
-
-function applyIntersectDirective(node, {tag, props}, args, rootMargin = "0% 100%", data) {
-  if (!data) {
-    const observer = new IntersectionObserver((xs, observer) => {
-      for (const x of xs) x.target.classList.toggle("intersecting", x.isIntersecting);
-    }, {rootMargin});
-    observer.observe(node);
-  }
-  return true;
-}
-
-function applyHrefDirective(node, {tag, props}, args, href, data) {
-  node.href = href;
-  if (!data) node.addEventListener("click", (e) => (route.go(node.href), e.preventDefault()));
-  return true;
-}
-
-function iterateForm(form, f) {
-  for (let k of new Set([...form.elements].map(el => el.name).filter(Boolean))) {
-    const el = form.elements[k];
-    if (!el.multiple && !(!el.type && el[0].type === "checkbox")) f(k, el);
-    else f(k, (el.options || el), el.options ? "selected" : "checked");
-  }
-}
-
 export function route(routes, parentNode) {
-  route.go = (href) => (history.pushState({}, "", href), renderRoute(routes, parentNode));
+  route.hooks = {}
+  route.go = (href) => {
+    if (!route.params) return
+    const f = route.hooks[route.params.key];
+    history.replaceState({scrollTop: f?.().scrollTop}, "");
+    history.pushState({}, "", href);
+    renderRoute(routes, parentNode);
+  };
   window.addEventListener("popstate", () => renderRoute(routes, parentNode));
+  parentNode.addEventListener("click", (e) => {
+    const a = e.target.closest("a"), href = a?.getAttribute("href"),
+          isRoute = href?.slice(0, 2) === "?/" || href?.slice(0, 3) === "/?/";
+    if (isRoute && !e.ctrlKey) (route.go(a.href), e.preventDefault());
+  });
   renderRoute(routes, parentNode);
 }
 
 function renderRoute(routes, parentNode) {
-  const [path, q] = searchParams(), params = Object.fromEntries(q);
-  if (!(location.hash !== oldHash && location.search === oldSearch)) {
-    for (let [r, tag] of Object.entries(routes)) {
-      if (matchRoute(r, path, params)) {
-        if (location.search !== oldSearch) {
-          window.scrollTo(0, 0);
-          document.activeElement?.blur?.();
-        }
-        Object.assign(route, {path, params});
-        render({tag, props: params}, parentNode);
-        oldSearch = location.search;
-        break;
-      }
+  const q = location.search, [path] = q.slice(1).split("&", 1),
+        params = Object.fromEntries(new URLSearchParams(q.slice(path.length+1)));
+  for (let [r, tag] of Object.entries(routes)) {
+    if (matchRoute(r, path, params)) {
+      window.scrollTo(0, 0);
+      document.activeElement?.blur?.();
+      Object.assign(route, {path, params});
+      return void render({tag, props: params}, parentNode);
     }
   }
-  if (location.search !== oldSearch) return void route.go("?/");
-  dispatchHashEvent(oldHash, "leave");
-  dispatchHashEvent(location.hash, "enter");
-  oldHash = location.hash;
+  route.go("?/");
 }
 
 function matchRoute(route, path, params) {
   const r = new RegExp("^" + route.replace(/\/?$/, "/?$").replace(/\/{(.+?)}/g, (_, x) =>
-    x.startsWith("...") ? `(?<${x.slice(3)}>(/.*)?)` : `/(?<${x}>[^/]+)`
+    x.startsWith("...") ? `/(?<${x.slice(3)}>(.*)?)` : `/(?<${x}>[^/]+)`
   ));
   const match = r.exec(path);
   if (match) {
@@ -355,18 +263,4 @@ function matchRoute(route, path, params) {
     for (const k in match.groups) params[k] = decodeURIComponent(match.groups[k]);
     return true;
   }
-}
-
-function dispatchHashEvent(hash = "", type) {
-  const [id, ...args] = hash.split(":"), el = id && document.querySelector(id);
-  if (el) {
-    void el.offsetWidth; // reflow
-    el.classList.toggle("target", type === "enter");
-    el.dispatchEvent(new CustomEvent("hash", {detail: {id, args, type}}));
-  }
-}
-
-function searchParams() {
-  const q = location.search, [path] = q.slice(1).split("&", 1);
-  return [path, new URLSearchParams(q.slice(path.length+1))];
 }

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <script src="//www.gstatic.com/cast/sdk/libs/receiver/2.0.0/cast_receiver.js"></script>
+    <style>
+     html, body, iframe {
+       height: 100%;
+       width: 100%;
+       margin: 0;
+       padding: 0;
+       border: none;
+       color: white;
+     }
+    </style>
+    <script type="module" defer>
+    import {Sandbox, ConsoleToaster} from "//x.niklasfasching.de/cast.mjs";
+    const manager = cast.receiver.CastReceiverManager.getInstance();
+    const mediaBus = manager.getCastMessageBus('urn:x-cast:com.google.cast.media');
+    const bus = manager.getCastMessageBus('urn:x-cast:com.x.cast');
+    const sandbox = new Sandbox(document.body, location.href);
+    new ConsoleToaster();
+    sandbox.ready.then(() => {
+      manager.start({maxInactivity: 180, statusText: "ready"});
+    }, (err) => {
+      document.body.innerText = err.message;
+    });
+    bus.onMessage = async (e) => {
+      const {type, value} = JSON.parse(e.data);
+      if (type === "reload") {
+        location.reload();
+      } else if (type === "eval") {
+        const {code, args, ...rest} = JSON.parse(value);
+        const {result, err} = await sandbox.eval(code, args);
+        bus.send(e.senderId, JSON.stringify({type: "eval", value: {...rest, result, err}}));
+      } else {
+        bus.send(senderId, JSON.stringify({type: "unknown cmd", value: {data: e.data}}));
+      }
+    };
+    </script>
+  </body>
+</html>

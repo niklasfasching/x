@@ -1,0 +1,250 @@
+{
+  "jsxy: html: simple tags (0)": {
+    "children": [
+      {
+        "children": [],
+        "tag": "div"
+      },
+      {
+        "children": [],
+        "tag": "p"
+      },
+      {
+        "children": [],
+        "tag": "b"
+      },
+      {
+        "children": [],
+        "tag": "span"
+      },
+      {
+        "children": [],
+        "tag": "span"
+      },
+      {
+        "children": [],
+        "tag": "p"
+      }
+    ],
+    "tag": "body"
+  },
+  "jsxy: html: component tags (0)": {
+    "children": [],
+    "props": {},
+    "tag": "<<() => {}>>"
+  },
+  "jsxy: html: simple attributes (0)": {
+    "children": [
+      {
+        "children": [],
+        "props": {
+          "a": true,
+          "b": true,
+          "c": "value",
+          "d": 42
+        },
+        "tag": "div"
+      },
+      {
+        "children": [],
+        "props": {
+          "a": true
+        },
+        "tag": "div"
+      },
+      {
+        "children": [],
+        "props": {
+          "a": 42
+        },
+        "tag": "div"
+      }
+    ],
+    "tag": "body"
+  },
+  "jsxy: html: quoted attributes (0)": {
+    "children": [],
+    "props": {
+      "a": "q u o t e d",
+      "b": "q u o t e d",
+      "c": "q u o t e d",
+      "d": ""
+    },
+    "tag": "div"
+  },
+  "jsxy: html: dynamic attribute keys (0)": {
+    "children": [],
+    "props": {
+      "a": "1",
+      "b": "2"
+    },
+    "tag": "div"
+  },
+  "jsxy: html: ...spread props (0)": {
+    "children": [],
+    "props": {
+      "a": true,
+      "b": "1",
+      "c": 2,
+      "d": 3,
+      "e": 4
+    },
+    "tag": "div"
+  },
+  "jsxy: html: --css-var props (0)": {
+    "children": [],
+    "props": {
+      "style": ";--size:1em;"
+    },
+    "tag": "div"
+  },
+  "jsxy: html: class and id props (0)": {
+    "children": [
+      {
+        "children": [],
+        "props": {
+          "classList": " foo bar",
+          "id": "baz"
+        },
+        "tag": "div"
+      },
+      {
+        "children": [],
+        "props": {},
+        "tag": "div"
+      }
+    ],
+    "tag": "div"
+  },
+  "jsxy: html: children (0)": {
+    "children": [
+      {
+        "children": [
+          "\n          ",
+          "dynamic",
+          " div text\n          ",
+          {
+            "children": [
+              "and a node"
+            ],
+            "tag": "b"
+          }
+        ],
+        "tag": "div"
+      },
+      "dynamic",
+      "\n         body text\n      "
+    ],
+    "tag": "body"
+  },
+  "jsxy: html: array html children (0)": {
+    "children": [
+      {
+        "children": [
+          1
+        ],
+        "tag": "div"
+      },
+      {
+        "children": [
+          2
+        ],
+        "tag": "div"
+      },
+      {
+        "children": [
+          3
+        ],
+        "tag": "div"
+      }
+    ],
+    "tag": "div"
+  },
+  "jsxy: html: tag starting with special prop renders as div - but not null value tag (0)": {
+    "children": [
+      {
+        "children": [],
+        "props": {
+          "classList": " class"
+        },
+        "tag": "div"
+      },
+      {
+        "children": [],
+        "props": {
+          "classList": " class"
+        },
+        "tag": "div"
+      },
+      {
+        "children": [],
+        "props": {
+          "id": "id"
+        },
+        "tag": "div"
+      },
+      {
+        "children": [],
+        "props": {
+          "id": "id"
+        },
+        "tag": "div"
+      },
+      {
+        "children": [],
+        "props": {
+          "style": ";--display:contents;"
+        },
+        "tag": "div"
+      },
+      {
+        "children": [],
+        "props": {
+          "style": ";--display:contents;"
+        },
+        "tag": "div"
+      },
+      {
+        "children": [],
+        "props": {
+          "x": 10
+        },
+        "tag": "div"
+      },
+      {
+        "children": [],
+        "props": {
+          "x": 10
+        },
+        "tag": "div"
+      },
+      {
+        "children": [],
+        "tag": ""
+      },
+      {
+        "children": [],
+        "tag": ""
+      }
+    ],
+    "tag": "div"
+  },
+  "jsxy: render: static render (0)": "<div>hello world</div>",
+  "jsxy: render: svg (0)": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"0\" y=\"0\" width=\"100\" height=\"100\" stroke=\"black\"></rect></svg>",
+  "jsxy: render: vnode/vnode array children render (0)": "<ul>\n            <li>1</li><li>2</li><li>3</li><li>4</li></ul>",
+  "jsxy: render: render array of vnodes (0)": "<div>1</div><div>2</div><div>3</div>",
+  "jsxy: render: render array of vnodes (1)": "<div>4</div><div>5</div>",
+  "jsxy: render: dynamic render (0)": "<div>\n            Count: 0</div>",
+  "jsxy: render: dynamic render (1)": "<div>\n            Count: 1<b>(uneven!)</b></div>",
+  "jsxy: render: dynamic render (2)": "<div>\n            Count: 2</div>",
+  "jsxy: render: dynamic render (3)": "<div>\n            Count: 3<b>(uneven!)</b></div>",
+  "jsxy: render: @handlers (0)": "<div>0</div>",
+  "jsxy: render: @handlers (1)": "<div>1</div>",
+  "jsxy: render: custom event handlers (0)": "<div>0</div>",
+  "jsxy: render: custom event handlers (1)": "<div>1</div>",
+  "jsxy: render: render root/app from any child (0)": "<div><button></button>0</div>",
+  "jsxy: render: render root/app from any child (1)": "<div><button></button>1</div>",
+  "jsxy: render: renderChildren works correctly when removing children (0)": "<div>123</div>",
+  "jsxy: render: renderChildren works correctly when removing multiple children (0)": "<div>123</div>",
+  "jsxy: render: render removes existing vnode props when necessary (0)": "<div class=\"\">hello world</div>"
+}

@@ -1,0 +1,119 @@
+{{ define "x-html" }}
+<!DOCTYPE html>
+<html lang="en">
+  {{ if not .IsFragment }}
+  <head>
+    {{ block "x-head-defaults" . }}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+    window.XScript = class XScript extends HTMLElement {
+      constructor(iframe, js) { Object.assign(super(), {iframe, js}) }
+      connectedCallback() {
+        if (window !== window.top) throw new Error("x-script is meant to apply on top frame");
+        new Function("iframe", "$", this.js + ";" + this.innerHTML)(this.iframe, this);
+      }
+    }
+    customElements.define("x-script", XScript)
+    window.XToast = class XToast extends HTMLElement {
+      constructor(msg, ...classes) {
+        super()
+        this.attachShadow({mode: "open"}).innerHTML = `
+          <style>
+           :host(.error) details {
+             background: #f8d7da;
+             color: #a72334;
+           }
+           details {
+             display: block;
+             width: 50vw;
+             padding: 1em;
+             border-radius: .5em;
+             box-shadow: 0 .3em 1em #0004;
+             background: #e9ecef;
+             color: #495057;
+             position: absolute;
+             top: 1em;
+             right: 1em;
+           }
+           details:not([open]) {
+             display: none;
+           }
+           summary {
+             list-style: none;
+             float: right;
+             cursor: pointer;
+             font-weight: bold;
+           }
+           pre {
+             white-space: pre-wrap;
+             word-wrap: break-word;
+             padding-right: 2rem;
+             margin-top: 0;
+           }
+          </style>
+          <details open>
+            <summary>close</summary>
+            <pre><slot></slot></pre>
+          </details>`;
+        this.shadowRoot.querySelector("details > pre").append(msg || "");
+        this.classList.add(...classes);
+      }
+    }
+    customElements.define("x-toast", XToast);
+
+    // heavily inspired by htmz
+    document.head.append(Object.assign(document.createElement("iframe"), {
+      name: "x",
+      hidden: true,
+      onload: ({target: iframe}) => {
+        if (iframe.contentWindow.location.href === "about:blank") return;
+        setTimeout(() => {
+          // TODO: https://stackoverflow.com/questions/220231/accessing-the-web-pages-http-headers-in-javascript
+          // use headers to redirect etc
+          const status = iframe.contentWindow.performance.getEntriesByType("navigation")[0].responseStatus;
+          if (status >= 300) {
+            const msg = `${iframe.contentWindow.location.pathname} (${status}): ${iframe.contentDocument.body.innerText}`;
+            return void document.body.append(new XToast(msg, "error"));
+          }
+          iframe.contentDocument.querySelectorAll("x-script, [x-act], [x-id], [x-sel]")?.forEach(el => {
+            if (el.tagName === "X-SCRIPT") return void document.head.append(Object.assign(el, {iframe}))
+            const act = el.getAttribute("x-act") || "replace",
+                  sel = el.getAttribute("x-sel"),
+                  id = el.getAttribute("x-id");
+            const targetEl = document.querySelector(sel || `[x-id="${id}"]`);
+            if (targetEl && act === "content") targetEl.replaceChildren(...el.childNodes);
+            else if (targetEl && act === "append") targetEl.append(el);
+            else if (targetEl && act === "replace") targetEl.replaceWith(el);
+            else console.error({sel, id, act, targetEl, el});
+          });
+          if (iframe.contentWindow.location.hash === "#push") {
+            history.pushState({}, null, iframe.contentWindow.location.href);
+          }
+          iframe.contentWindow.location.replace("about:blank");
+          iframe.remove();
+          document.head.appendChild(iframe);
+        });
+      },
+    }));
+    </script>
+
+    {{ end }}
+    {{ block "x-head" . }}{{ end }}
+  </head>
+  {{ end }}
+  <body>
+    {{ block "body" . }}{{ end }}
+  </body>
+</html>
+{{ end }}
+
+
+{{ define "x-error" }}
+<x-toast x-sel="body" x-act="append" class="error">{{ index .Form.err 0 }}</x-toast>
+{{ end }}
+
+
+{{ define "x-redirect" }}
+<meta x-sel="head" x-act="append" http-equiv="refresh" content="{{ . }}">
+{{ end }}

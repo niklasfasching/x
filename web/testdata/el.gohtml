@@ -1,0 +1,8 @@
+{{ define "el-test" }}
+  {{ el "el" `a="a a a" b=b c=""`}}
+{{ end }}
+
+
+{{ define "el" }}
+<div a="{{.a}}" b="{{.b}}" c="{{.c}}" d="{{.d}}"/>
+{{ end }}
