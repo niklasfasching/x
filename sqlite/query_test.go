@@ -63,7 +63,7 @@ func TestTable(t *testing.T) {
 }
 
 func simpleDB(t *testing.T, schema ...string) *DB {
-	db, err := New(":memory:", schema, nil, nil)
+	db, err := New(":memory:", schema, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
