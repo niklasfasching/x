@@ -73,6 +73,8 @@ func NewRingCache[K comparable, V any](n int, fn func(context.Context, K) (V, er
 }
 
 func (c *RingCache[K, V]) Map() map[K]V {
+	c.Lock()
+	defer c.Unlock()
 	return maps.Clone(c.vs)
 }
 

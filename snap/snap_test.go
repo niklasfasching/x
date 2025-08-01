@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/niklasfasching/x/jml"
+	"github.com/niklasfasching/x/format/jml"
 	"golang.org/x/exp/slices"
 )
 
