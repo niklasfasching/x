@@ -1,320 +1,191 @@
 package sqlite
 
 import (
-	"database/sql"
+	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
-	"time"
-
-	"github.com/niklasfasching/x/geo"
+	"text/template"
 )
 
-type Connection interface {
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	Exec(query string, args ...interface{}) (sql.Result, error)
+type Handler struct {
+	Stmts map[string]*Stmt
+}
+type result struct {
+	Value any
+	Err   error
 }
 
-type JSON struct{ Value interface{} }
-
-type PureFunc interface{}
-
-var defaultFuncs = map[string]interface{}{
-	"json_includes":  PureFunc(jsonIncludes),
-	"regexp_extract": PureFunc(regexpExtract),
-	"geo_haversine":  PureFunc(geo.Haversine),
-	"geo_offset_lat": PureFunc(offsetLat),
-	"geo_offset_lng": PureFunc(offsetLng),
-}
-
+//go:embed templates.tpl
+var templatesString string
+var templates = template.Must(template.New("").Funcs(template.FuncMap{
+	"panic": func(args ...any) string { panic(args) },
+	"lower": strings.ToLower,
+	"join":  strings.Join,
+}).Parse(templatesString))
 var regexpExtractRegexps = map[string]*regexp.Regexp{}
 
-func Print(db *DB, debug bool, query string, args ...interface{}) error {
-	start := time.Now()
-	if debug {
-		if err := printQuery(os.Stderr, db, "explain query plan "+query, args...); err != nil {
-			return err
-		}
+func Template(name string, v any) string {
+	w := &strings.Builder{}
+	if err := templates.ExecuteTemplate(w, name, v); err != nil {
+		panic(err)
 	}
-	if err := printQuery(os.Stdout, db, query, args...); err != nil {
-		return err
-	}
-	if debug {
-		fmt.Fprintf(os.Stderr, `{"time": %q}`+"\n", time.Since(start))
-	}
-	return nil
+	return w.String()
 }
 
-func printQuery(w io.Writer, db *DB, query string, args ...interface{}) error {
-	j := json.NewEncoder(w)
-	j.SetIndent("", "  ")
-	j.SetEscapeHTML(false)
-	rows, err := db.Query(query, args...)
-	if err != nil {
-		return err
-	}
-	columns, err := rows.Columns()
-	if err != nil {
-		return err
-	}
-	for rows.Next() {
-		values := make([]interface{}, len(columns))
-		for i := range values {
-			values[i] = new(interface{})
-		}
-		if err := rows.Scan(values...); err != nil {
-			return err
-		}
-		m := map[string]interface{}{}
-		for i, k := range columns {
-			m[k] = values[i]
-		}
-
-		if err := j.Encode(m); err != nil {
-			return err
-		}
-	}
-	return rows.Err()
+func JSONIndex(name, table, id string, cols ...string) string {
+	return Template("fts", map[string]any{
+		"name":      name,
+		"id":        id,
+		"table":     table,
+		"tokenizer": "json",
+		"cols":      cols,
+	})
 }
 
-func Query(c Connection, queryString string, result interface{}, args ...interface{}) error {
-	if err := query(c, queryString, result, args...); err != nil {
-		return fmt.Errorf("%s: %s", queryString, err)
-	}
-	return nil
+func HTMLIndex(name, table, id string, cols ...string) string {
+	return Template("fts", map[string]any{
+		"name":      name,
+		"id":        id,
+		"table":     table,
+		"tokenizer": "html",
+		"cols":      cols,
+	})
 }
 
-func Exec(c Connection, queryString string, args ...interface{}) (sql.Result, error) {
-	result, err := c.Exec(queryString, args...)
-	if err != nil {
-		err = fmt.Errorf("%s: %s", queryString, err)
-	}
-	return result, err
-}
-
-func Insert(c Connection, table string, v interface{}, or string) (sql.Result, error) {
-	rv, ks, qs, vs := reflect.ValueOf(v), []string{}, []string{}, []interface{}{}
-	add := func(k string, v reflect.Value) error {
-		ks = append(ks, k)
-		qs = append(qs, "?")
-		switch v.Kind() {
-		case reflect.Slice, reflect.Struct, reflect.Map:
-			bs, err := json.Marshal(v.Interface())
-			if err != nil {
-				return err
-			}
-			vs = append(vs, string(bs))
-		default:
-			vs = append(vs, v.Interface())
+func NewHandler(db *DB, stmts ...*Stmt) (*Handler, error) {
+	m := map[string]*Stmt{}
+	for _, s := range stmts {
+		if _, ok := m[s.Name]; ok {
+			return nil, fmt.Errorf("duplicate stmt %q", s.Name)
 		}
-		return nil
-	}
-	switch rv.Kind() {
-	case reflect.Map:
-		for m := rv.MapRange(); m.Next(); {
-			if err := add(m.Key().String(), m.Value().Elem()); err != nil {
-				return nil, err
-			}
-		}
-	case reflect.Struct:
-		for i, rt := 0, rv.Type(); i < rv.NumField(); i++ {
-			if err := add(rt.Field(i).Name, rv.Field(i)); err != nil {
-				return nil, err
-			}
-		}
-	default:
-		return nil, fmt.Errorf("unhandled type %T", v)
-	}
-	query := fmt.Sprintf("INSERT %s INTO %s (%s) VALUES (%s)", or, table, strings.Join(ks, ", "), strings.Join(qs, ", "))
-	return c.Exec(query, vs...)
-}
-
-func query(c Connection, query string, result interface{}, args ...interface{}) error {
-	xs := reflect.ValueOf(result)
-	if xs.Kind() != reflect.Ptr || xs.Type().Elem().Kind() != reflect.Slice {
-		return fmt.Errorf("cannot unmarshal query results into %t (%v)", result, result)
-	}
-	rows, err := c.Query(query, args...)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	if err := unmarshal(rows, xs.Elem()); err != nil {
-		return err
-	}
-	return rows.Err()
-}
-
-func unmarshal(rows *sql.Rows, xs reflect.Value) error {
-	t, isPtr := xs.Type().Elem(), false
-	switch t.Kind() {
-	case reflect.Ptr:
-		t, isPtr = t.Elem(), true
-		fallthrough
-	case reflect.Struct:
-		return unmarshalStruct(rows, xs, t, isPtr)
-	case reflect.Interface:
-		t = reflect.TypeOf(map[string]interface{}{})
-		fallthrough
-	case reflect.Map:
-		return unmarshalMap(rows, xs, t, isPtr)
-	default:
-		for rows.Next() {
-			x := reflect.New(t)
-			if err := scan(rows, []interface{}{x.Interface()}); err != nil {
-				return err
-			}
-			if !isPtr {
-				x = x.Elem()
-			}
-			xs.Set(reflect.Append(xs, x))
-		}
-	}
-	return nil
-}
-
-func unmarshalStruct(rows *sql.Rows, xs reflect.Value, t reflect.Type, isPtr bool) error {
-	columns, err := rows.Columns()
-	if err != nil {
-		return err
-	}
-	for rows.Next() {
-		x := reflect.New(t).Elem()
-		values := []interface{}{}
-		for _, column := range columns {
-			field := x.FieldByName(column) // TODO: use tags / case conversion for struct -> sql field mapping
-			if field.IsValid() {
-				values = append(values, field.Addr().Interface())
-			} else {
-				values = append(values, new(interface{}))
-			}
-		}
-		if err = scan(rows, values); err != nil {
-			return err
-		}
-		if isPtr {
-			x = x.Addr()
-		}
-		xs.Set(reflect.Append(xs, x))
-	}
-	return nil
-}
-
-func unmarshalMap(rows *sql.Rows, xs reflect.Value, t reflect.Type, isPtr bool) error {
-	columns, err := rows.Columns()
-	if err != nil {
-		return err
-	}
-	mt := reflect.MapOf(reflect.TypeOf(""), t.Elem())
-	values := []interface{}{}
-	for range columns {
-		values = append(values, reflect.New(t.Elem()).Interface())
-	}
-	for rows.Next() {
-		if err = scan(rows, values); err != nil {
-			return err
-		}
-		x := reflect.MakeMapWithSize(mt, len(columns))
-		for i, column := range columns {
-			x.SetMapIndex(reflect.ValueOf(column), reflect.ValueOf(values[i]).Elem())
-		}
-		if isPtr {
-			x = x.Addr()
-		}
-		xs.Set(reflect.Append(xs, x))
-	}
-	return nil
-}
-
-func scan(rows *sql.Rows, values []interface{}) error {
-	tmp := make([]interface{}, len(values))
-	for i := range values {
-		tmp[i] = new(interface{})
-	}
-	if err := rows.Scan(tmp...); err != nil {
-		return err
-	}
-	for i := range values {
-		if err := convert(tmp[i], values[i]); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func convert(src, dst interface{}) error {
-	bs, err := json.Marshal(src)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(bs, dst)
-}
-
-func (j JSON) MarshalJSON() ([]byte, error) {
-	switch s, ok := j.Value.(string); {
-	case ok && isJSONArrayString(s):
-		xs := []JSON{}
-		if err := json.Unmarshal([]byte(s), &xs); err != nil {
-			break
-		}
-		return json.Marshal(xs)
-	case ok && isJSONObjectString(s):
-		xs := map[string]JSON{}
-		if err := json.Unmarshal([]byte(s), &xs); err != nil {
-			break
-		}
-		return json.Marshal(xs)
-	}
-	return json.Marshal(j.Value)
-}
-
-func (j *JSON) UnmarshalJSON(b []byte) error {
-	return json.Unmarshal(b, &j.Value)
-}
-
-func isJSONObjectString(s string) bool {
-	return len(s) >= 2 && s[0] == '{' && s[len(s)-1] == '}'
-}
-
-func isJSONArrayString(s string) bool {
-	return len(s) >= 2 && s[0] == '[' && s[len(s)-1] == ']'
-}
-
-func ReadMigrations(directory string) (map[string]string, error) {
-	m := map[string]string{}
-	sqlFiles, err := filepath.Glob(filepath.Join(directory, "*.sql"))
-	if err != nil {
-		return nil, err
-	}
-	for _, sqlFile := range sqlFiles {
-		bs, err := ioutil.ReadFile(sqlFile)
+		stmt, err := db.Prepare(s.SQL)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to prepare stmt %q: %w", s.SQL, err)
 		}
-		m[sqlFile] = string(bs)
+		s.Stmt = stmt
+		m[s.Name] = s
 	}
-	return m, nil
+	return &Handler{m}, nil
 }
 
-func jsonIncludes(s string, vs ...interface{}) (bool, error) {
-	m, xs := map[string]bool{}, []interface{}{}
-	if err := json.Unmarshal([]byte(s), &xs); err != nil {
-		return false, err
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if code, err := h.Handle(w, r); code != -1 {
+		http.Error(w, err.Error(), code)
 	}
+}
+
+func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) (int, error) {
+	name := r.PathValue("stmt")
+	if name == "" {
+		return 404, fmt.Errorf("{stmt} path value not set")
+	}
+	stmt, ok := h.Stmts[name]
+	if !ok {
+		return 404, fmt.Errorf("stmt %q not found", name)
+	}
+	if r.Method != http.MethodPost && !stmt.IsQuery {
+		return 400, fmt.Errorf("non-query stmt %q must not be called as %s", name, r.Method)
+	}
+	args := map[string]any{}
+	switch r.Method {
+	case "GET":
+		for k, v := range r.URL.Query() {
+			args[k] = v
+		}
+	case "POST":
+		if r.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
+			if err := r.ParseForm(); err != nil {
+				return 400, fmt.Errorf("failed to parse form: %s", err)
+			}
+			for k, vs := range r.Form {
+				if strings.HasPrefix(k, "[]") {
+					bs, err := json.Marshal(vs)
+					if err != nil {
+						return 400, fmt.Errorf("invalid form value %q(%s): %s", k, vs, err)
+					}
+					args[strings.TrimPrefix(k, "[]")] = string(bs)
+				} else {
+					args[k] = vs[0]
+				}
+			}
+		} else {
+			body := map[string]any{}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				return 400, fmt.Errorf("failed to unmarshal body: %s", err)
+			}
+			for k, v := range body {
+				args[k] = v
+			}
+		}
+	default:
+		return 405, fmt.Errorf("%s not allowed", r.Method)
+	}
+	for _, k := range stmt.Args {
+		if _, ok := args[k]; !ok {
+			return 400, fmt.Errorf("missing required arg %q for %s", k, name)
+		}
+	}
+	e := json.NewEncoder(w)
+	e.SetIndent("", "  ")
+	e.SetEscapeHTML(false)
+	if err := e.Encode(newResult(stmt.Do(args))); err != nil {
+		panic(err)
+	}
+	return -1, nil
+}
+
+func FuncMap(db *DB) template.FuncMap {
+	return template.FuncMap{
+		"query": func(q string, args ...any) any {
+			r := newResult(scan[Map[any]](queryRows(db, true, q, args...)))
+			return r
+		},
+		"queryOne": func(q string, args ...any) any {
+			return newResult(scanOne[Map[any]](queryRows(db, true, q, args...)))
+		},
+		"exec": func(q string, args ...any) result {
+			id, count, err := CheckExec(db, q, args...)
+			return newResult(map[string]any{"id": id, "count": count}, err)
+		},
+	}
+}
+
+func GenerateTypeMethods(pkg, path string, vs ...any) {
+	w, types := &bytes.Buffer{}, []any{}
 	for _, v := range vs {
-		m[fmt.Sprintf("%v", v)] = true
+		t := reflect.TypeOf(v)
+		type field struct{ Name, Kind, Fallback, Extra string }
+		fields, pk := []field{}, ""
+		for i := 0; i < t.NumField(); i++ {
+			f, kind, fallback := t.Field(i), "", ""
+			switch f.Type.Kind() {
+			case reflect.Struct, reflect.Map:
+				kind, fallback = "JSON_TEXT", "{}"
+			case reflect.Slice, reflect.Array:
+				kind, fallback = "JSON_TEXT", "[]"
+			case reflect.Int:
+				if name := strings.ToLower(f.Name); name == "rowid" || name == "id" {
+					kind, pk = "INTEGER PRIMARY KEY AUTOINCREMENT", f.Name
+				}
+			}
+			fields = append(fields, field{f.Name, kind, fallback, f.Tag.Get("sql")})
+		}
+		types = append(types, map[string]any{"name": t.Name(), "pk": pk, "fields": fields})
 	}
-	for _, x := range xs {
-		delete(m, fmt.Sprintf("%v", x))
+	data := map[string]any{"pkg": pkg, "types": types}
+	if err := templates.ExecuteTemplate(w, "type-interface-methods", data); err != nil {
+		panic(err)
+	} else if err := os.WriteFile(path, w.Bytes(), 0644); err != nil {
+		panic(err)
 	}
-	return len(m) == 0, nil
+	log.Printf("Updated pkg %s (%q)", pkg, path)
 }
 
 func regexpExtract(input, regexpString string, i int) (string, error) {
@@ -332,12 +203,11 @@ func regexpExtract(input, regexpString string, i int) (string, error) {
 	return "", nil
 }
 
-func offsetLat(lat, lng, bearing, km float64) float64 {
-	lat2, _ := geo.Offset(lat, lng, bearing, km)
-	return lat2
-}
-
-func offsetLng(lat, lng, bearing, km float64) float64 {
-	_, lng2 := geo.Offset(lat, lng, bearing, km)
-	return lng2
+func newResult(v any, err error) result { return result{v, err} }
+func (r result) MarshalJSON() ([]byte, error) {
+	if r.Err != nil {
+		return json.Marshal(map[string]any{"err": r.Err.Error()})
+	} else {
+		return json.Marshal(map[string]any{"value": r.Value})
+	}
 }

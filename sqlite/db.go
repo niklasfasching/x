@@ -1,56 +1,86 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
-	"sort"
+	"maps"
 
 	sqlite3 "github.com/mattn/go-sqlite3"
 )
 
+type Connection interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+	Exec(query string, args ...any) (sql.Result, error)
+	Stmt(string) *sql.Stmt
+}
+
 type DB struct {
-	DataSourceName string
-	Funcs          map[string]interface{}
-	RODB           *sql.DB
+	funcs map[string]any
+	stmts map[string]*sql.Stmt
 	*sql.DB
 }
 
-var driverIndex = 0
+type Tx struct {
+	*sql.Tx
+	*DB
+}
 
-func (db *DB) Open(migrations map[string]string) error {
-	if db.DB != nil {
-		return errors.New("already open")
+type PureFunc any
+
+var driverIndex = 0
+var defaultFuncs = map[string]any{
+	"re_extract": PureFunc(regexpExtract),
+	// "fts_index":  ftsIndex,
+}
+
+func New(name string, migrations []string, stmts map[string]string, fs map[string]any) (*DB, error) {
+	d := &DB{
+		funcs: map[string]any{},
+		stmts: map[string]*sql.Stmt{},
 	}
-	funcs := map[string]interface{}{}
-	for k, v := range defaultFuncs {
-		funcs[k] = v
-	}
-	for k, v := range db.Funcs {
-		funcs[k] = v
-	}
-	db.Funcs = funcs
-	rwDriver, roDriver := fmt.Sprintf("sqlite3-%d", driverIndex), fmt.Sprintf("sqlite3-read-only-%d", driverIndex)
+	maps.Copy(d.funcs, defaultFuncs)
+	maps.Copy(d.funcs, fs)
+	driver := fmt.Sprintf("sqlite3-%d", driverIndex)
 	driverIndex++
-	sql.Register(rwDriver, &sqlite3.SQLiteDriver{ConnectHook: db.connectHook})
-	sql.Register(roDriver, &sqlite3.SQLiteDriver{ConnectHook: db.readOnlyConnectHook})
-	if rwDB, err := sql.Open(rwDriver, db.DataSourceName); err != nil {
-		return err
-	} else {
-		db.DB = rwDB
+	sql.Register(driver, &sqlite3.SQLiteDriver{ConnectHook: d.connectHook})
+	db, err := sql.Open(driver, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open: %w", err)
 	}
-	if roDB, err := sql.Open(roDriver, db.DataSourceName); err != nil {
-		return err
-	} else {
-		db.RODB = roDB
+	d.DB = db
+	for k, sql := range stmts {
+		stmt, err := db.Prepare(sql)
+		if err != nil {
+			return nil, err
+		}
+		d.stmts[k] = stmt
 	}
-	return db.migrate(migrations)
+	return d, d.migrate(migrations)
+}
+
+func (db *DB) Begin() (*Tx, error) {
+	return db.BeginTx(context.Background(), nil)
+}
+
+func (db *DB) Stmt(k string) *sql.Stmt {
+	return db.stmts[k]
+}
+
+func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) {
+	tx, err := db.DB.BeginTx(ctx, opts)
+	return &Tx{tx, db}, err
+}
+
+func (tx *Tx) Stmt(k string) *sql.Stmt {
+	if stmt := tx.DB.Stmt(k); stmt != nil {
+		return tx.Tx.Stmt(stmt)
+	}
+	return nil
 }
 
 func (db *DB) connectHook(c *sqlite3.SQLiteConn) error {
-	for name, f := range db.Funcs {
+	for name, f := range db.funcs {
 		_, isPure := f.(PureFunc)
 		if err := c.RegisterFunc(name, f, isPure); err != nil {
 			return err
@@ -59,91 +89,36 @@ func (db *DB) connectHook(c *sqlite3.SQLiteConn) error {
 	return nil
 }
 
-func (db *DB) readOnlyConnectHook(c *sqlite3.SQLiteConn) error {
-	for name, f := range db.Funcs {
-		_, isPure := f.(PureFunc)
-		if err := c.RegisterFunc(name, f, isPure); err != nil {
-			return err
-		}
-	}
-	c.RegisterAuthorizer(func(op int, arg1, arg2, arg3 string) int {
-		switch op {
-		case sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION:
-			return sqlite3.SQLITE_OK
-		case sqlite3.SQLITE_PRAGMA:
-			switch arg1 {
-			case "table_info", "data_version":
-				return sqlite3.SQLITE_OK
-			case "user_version":
-				if arg2 == "" && arg3 == "" {
-					return sqlite3.SQLITE_OK
-				}
-			}
-		case sqlite3.SQLITE_UPDATE: // necessary for fts5. see commit message
-			if arg1 == "sqlite_master" && arg3 == "main" {
-				return sqlite3.SQLITE_OK
-			}
-		}
-		return sqlite3.SQLITE_DENY
-	})
-	return nil
-}
-
-func (db *DB) migrate(migrations map[string]string) error {
-	q := "CREATE TABLE IF NOT EXISTS _migrations (name STRING, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
-	if _, err := db.Exec(q); err != nil {
+func (db *DB) migrate(migrations []string) error {
+	tx, err := db.Begin()
+	if err != nil {
 		return err
 	}
-	names, applied := []string{}, map[string]bool{}
-	if err := Query(db, "SELECT name FROM _migrations", &names); err != nil {
-		return err
+	defer tx.Rollback()
+	_, err = tx.Exec(`CREATE TABLE IF NOT EXISTS _migrations (sql TEXT)`)
+	if err != nil {
+		return fmt.Errorf("failed to create _migrations table: %w", err)
 	}
-	for _, name := range names {
-		applied[name] = true
+	appliedMigrations, err := Query[Map[string]](tx, "SELECT sql FROM _migrations")
+	if err != nil {
+		return fmt.Errorf("failed to query _migrations: %w", err)
 	}
-	keys := []string{}
-	for key := range migrations {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		if applied[key] {
-			continue
-		}
-		if _, err := db.Exec(migrations[key]); err != nil {
-			return err
-		}
-		if _, err := db.Exec("INSERT INTO _migrations (name) VALUES (?)", key); err != nil {
-			return err
+	rebuild := len(migrations) < len(appliedMigrations)
+	if !rebuild {
+		for i := range appliedMigrations {
+			rebuild = rebuild || migrations[i] != appliedMigrations[i]["sql"]
 		}
 	}
-	return nil
-}
-
-func (db *DB) Handler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	query, args, results := r.URL.Query().Get("query"), []interface{}{}, []map[string]JSON{}
-	for _, arg := range r.URL.Query()["arg"] {
-		args = append(args, arg)
+	if rebuild {
+		panic("rebuild")
 	}
-	if err := Query(db.RODB, query, &results, args...); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-	} else {
-		json.NewEncoder(w).Encode(results)
+	for _, stmt := range migrations[len(appliedMigrations):] {
+		if _, err := tx.Exec(stmt); err != nil {
+			return fmt.Errorf("failed to apply migration %q: %w", stmt, err)
+		}
+		if _, err := tx.Exec("INSERT INTO _migrations (sql) VALUES (?)", stmt); err != nil {
+			return fmt.Errorf("failed to record migration %q: %w", stmt, err)
+		}
 	}
-}
-
-func (db *DB) GetVersion() (int, error) {
-	results := []int{}
-	if err := Query(db, "PRAGMA user_version", &results); err != nil {
-		return 0, err
-	}
-	return results[0], nil
-}
-
-func (db *DB) SetVersion(version int) error {
-	_, err := Exec(db, fmt.Sprintf("PRAGMA user_version = %d", version))
-	return err
+	return tx.Commit()
 }

@@ -1,0 +1,18 @@
+[
+  {
+    "ID": 1,
+    "Title": "doc one",
+    "Tags": [
+      1,
+      2
+    ]
+  },
+  {
+    "ID": 2,
+    "Title": "doc two",
+    "Tags": [
+      2,
+      3
+    ]
+  }
+]
