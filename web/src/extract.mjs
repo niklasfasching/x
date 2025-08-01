@@ -20,16 +20,16 @@ export class Extractor {
     this.logs.push(vs[0])
   }
 
-  run(document) {
+  async run(document) {
     if (document.readyState !== "complete") throw new Error("document not ready")
-    document.querySelectorAll("img").forEach(img => this.inlineIMG(img));
+    await Promise.all([...document.querySelectorAll("img")].map(img => this.inlineIMG(img)))
     document.querySelectorAll("svg").forEach(img => this.inlineSVG(img));
     const meta = this.parseMeta(document);
-    document.querySelectorAll("style").forEach(el => el.remove())
+    document.querySelectorAll("style, form").forEach(el => el.remove())
     const candidates = this.candidates(document);
     if (this.debug) console.log(candidates.length)
     for (let el of candidates.slice(0,5)) {
-      this.log({tag: el.tagName, id: el.id, class: el.className, scores: el.scores, _: el._})
+      // TODO this.log({tag: el.tagName, id: el.id, class: el.className, scores: el.scores, _: el._})
       if (this.debug) console.log(el, el.scores, el._)
     }
 
@@ -159,9 +159,13 @@ export class Extractor {
     return scores;
   }
 
-  inlineIMG(img) {
+  async inlineIMG(img) {
     if (this.debug) return
     try {
+      if (!img.complete) {
+        await new Promise((onload, onerr) => {img.onload = onload, img.onerror = onerr})
+        this.log(`awaited! ${img.complete}`)
+      }
       const c = document.createElement("canvas");
       c.width = img.naturalWidth, c.height = img.naturalHeight;
       c.getContext("2d").drawImage(img, 0, 0);

@@ -207,10 +207,16 @@ func (h *H) Capture(ctx context.Context, url string) (*Response, string, error) 
 	<-interactiveCtx.Done()
 	r := struct{ Data string }{}
 	// https://issues.chromium.org/issues/40495614
-	s.Eval(`document.querySelectorAll("script[type*='ld+json']").forEach(el => {
-      document.head.append(Object.assign(document.createElement("meta"), {
-        name: el.type, content: el.innerText,
-      }))
+	s.Eval(`
+      await Promise.all([...document.querySelectorAll("img[loading=lazy]")].map(img => {
+        img.loading = "eager";
+        if (img.complete) return;
+        return new Promise((res, rej) => { img.onload = res, img.onerror = rej });
+      }));
+      document.querySelectorAll("script[type*='ld+json']").forEach(el => {
+        document.head.append(Object.assign(document.createElement("meta"), {
+          name: el.type, content: el.innerText,
+        }));
     })`, nil)
 	err = s.Exec("Page.captureSnapshot", nil, &r)
 	return &s.Response, r.Data, err
