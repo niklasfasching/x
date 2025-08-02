@@ -103,7 +103,7 @@ func (v {{ $t.name }}) ScanRows(rows *sqlite.Rows) (any, error) {
 			{{ if eq ($f.Kind) "JSON_TEXT" -}}
 				args[i] = sqlite.NewJSON(&v.{{ $f.Name }})
 			{{- else -}}
-				args[i] = &v.{{ $f.Name }}
+				args[i] = sqlite.NewNull(&v.{{ $f.Name }})
 			{{- end -}}
 			{{ end }}
 			default:

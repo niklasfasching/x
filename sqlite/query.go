@@ -31,6 +31,7 @@ type Rows struct {
 
 type Map[T any] map[string]T
 type JSON struct{ V any }
+type Null[T any] struct{ V *T }
 
 func Exec(c Connection, q string, args ...any) (sql.Result, error) {
 	if stmt := c.Stmt(q); stmt != nil {
@@ -152,6 +153,9 @@ func scanJSON(src, dst any) error {
 	}
 }
 
+func NewNull[T any](v *T) *Null[T] { return &Null[T]{v} }
+func NewJSON(v any) *JSON          { return &JSON{v} }
+
 func (r *Rows) Next() bool {
 	if r.Done {
 		return false
@@ -161,7 +165,13 @@ func (r *Rows) Next() bool {
 	return r.Rows.Next()
 }
 
-func NewJSON(v any) *JSON          { return &JSON{v} }
+func (v *Null[T]) Scan(src any) error {
+	n := &sql.Null[T]{}
+	err := n.Scan(src)
+	*v.V = n.V
+	return err
+}
+
 func (v *JSON) Scan(src any) error { return scanJSON(src, &v.V) }
 func (v *JSON) Value() (driver.Value, error) {
 	bs, err := json.Marshal(v.V)
