@@ -13,6 +13,7 @@ static inline int call_xToken(void* pCb, void* pCtx, int flags, const char* pTok
 import "C"
 import (
 	"fmt"
+	"log"
 	"strings"
 	"unsafe"
 
@@ -37,6 +38,7 @@ func callTokenize(pName *C.char, pCtx unsafe.Pointer, flags C.int, pText *C.char
 		return nil
 	})
 	if err != nil {
+		log.Println(err)
 		return C.SQLITE_ERROR
 	}
 	return C.SQLITE_OK

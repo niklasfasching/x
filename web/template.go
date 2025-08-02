@@ -202,6 +202,8 @@ func (c *Context) Query(kvs ...string) any {
 	for i := 0; i < len(kvs)-1; i += 2 {
 		k, v := kvs[i], kvs[i+1]
 		switch k[0] {
+		case '~':
+			m[k[1:]] = []string{strings.ReplaceAll(v, "%s", strings.Join(m[k[1:]], " "))}
 		case '+':
 			m[k[1:]] = append(m[k[1:]], v)
 			slices.Sort(m[k[1:]])

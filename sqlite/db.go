@@ -37,6 +37,7 @@ var defaultFuncs = map[string]any{
 	"re_extract": PureFunc(regexpExtract),
 	// "fts_index":  ftsIndex,
 }
+var MigrateErr = fmt.Errorf("schema needs to be rebuilt")
 
 func New(name string, migrations []string, stmts map[string]string, fs map[string]any, ffw bool) (*DB, error) {
 	d := &DB{
@@ -60,7 +61,21 @@ func New(name string, migrations []string, stmts map[string]string, fs map[strin
 		}
 		d.stmts[k] = stmt
 	}
-	return d.migrate(name, migrations, stmts, fs, ffw)
+	if err := d.migrate(migrations); !ffw || err != MigrateErr {
+		return d, err
+	}
+	newName := name + ".tmp"
+	newDB, err := New(newName, migrations, stmts, fs, false)
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(newName)
+	if err := Copy(name, d, newDB); err != nil {
+		return nil, err
+	} else if err := cmp.Or(db.Close(), newDB.Close(), os.Rename(newName, name)); err != nil {
+		return nil, err
+	}
+	return New(name, migrations, stmts, fs, false)
 }
 
 func (db *DB) Begin() (*Tx, error) {
@@ -93,11 +108,11 @@ func (db *DB) connectHook(c *sqlite3.SQLiteConn) error {
 	return nil
 }
 
-func (db *DB) Tables() (map[string][]string, error) {
+func Tables(c Connection) (map[string][]string, error) {
 	sql := `SELECT name, (SELECT group_concat(name) FROM pragma_table_info(tl.name)) as columns
             FROM pragma_table_list tl
             WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != '_migrations'`
-	ts, err := Query[Map[string]](db, sql)
+	ts, err := Query[Map[string]](c, sql)
 	m := map[string][]string{}
 	for _, t := range ts {
 		m[t["name"]] = strings.Split(t["columns"], ",")
@@ -105,19 +120,19 @@ func (db *DB) Tables() (map[string][]string, error) {
 	return m, err
 }
 
-func (db *DB) migrate(name string, migrations []string, stmts map[string]string, fs map[string]any, ffw bool) (*DB, error) {
+func (db *DB) migrate(migrations []string) error {
 	tx, err := db.Begin()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer tx.Rollback()
 	_, err = tx.Exec(`CREATE TABLE IF NOT EXISTS _migrations (sql TEXT)`)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create _migrations table: %w", err)
+		return fmt.Errorf("failed to create _migrations table: %w", err)
 	}
 	appliedMigrations, err := Query[Map[string]](tx, "SELECT sql FROM _migrations")
 	if err != nil {
-		return nil, fmt.Errorf("failed to query _migrations: %w", err)
+		return fmt.Errorf("failed to query _migrations: %w", err)
 	}
 	rebuild := len(migrations) != len(appliedMigrations)
 	if !rebuild {
@@ -128,39 +143,33 @@ func (db *DB) migrate(name string, migrations []string, stmts map[string]string,
 	if !rebuild || len(appliedMigrations) == 0 {
 		for _, stmt := range migrations[len(appliedMigrations):] {
 			if _, err := tx.Exec(stmt); err != nil {
-				return nil, fmt.Errorf("failed to apply migration %q: %w", stmt, err)
+				return fmt.Errorf("failed to apply migration %q: %w", stmt, err)
 			}
 			if _, err := tx.Exec("INSERT INTO _migrations (sql) VALUES (?)", stmt); err != nil {
-				return nil, fmt.Errorf("failed to record migration %q: %w", stmt, err)
+				return fmt.Errorf("failed to record migration %q: %w", stmt, err)
 			}
 		}
-		return db, tx.Commit()
-	} else if !ffw {
-		return nil, fmt.Errorf("migrations do not match existing schema and ffw is disabled")
+		return tx.Commit()
 	}
-	newName := name + ".tmp"
-	os.Remove(newName)
-	newDB, err := New(newName, migrations, stmts, fs, ffw)
+	return MigrateErr
+}
+
+func Copy(name string, oldDB, newDB *DB) error {
+	oldTables, err := Tables(oldDB)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open rebuild db: %w", err)
+		return fmt.Errorf("failed to list tables to rebuild: %w", err)
 	}
-	defer os.Remove(newName)
-	defer newDB.Close()
 	newTX, err := newDB.Begin()
 	if err != nil {
-		return nil, fmt.Errorf("failed to open rebuild tx: %w", err)
+		return fmt.Errorf("failed to open rebuild tx: %w", err)
 	}
 	defer newTX.Rollback()
-	oldTables, err := db.Tables()
+	newTables, err := Tables(newDB)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list tables to rebuild: %w", err)
-	}
-	newTables, err := newDB.Tables()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list tables to rebuild: %w", err)
+		return fmt.Errorf("failed to list tables to rebuild: %w", err)
 	}
 	if _, err := newTX.Exec(fmt.Sprintf("ATTACH DATABASE '%s' AS old", name)); err != nil {
-		return nil, fmt.Errorf("failed to attach existing db: %w", err)
+		return fmt.Errorf("failed to attach existing db: %w", err)
 	}
 	for name, oldCols := range oldTables {
 		newCols := newTables[name]
@@ -176,14 +185,11 @@ func (db *DB) migrate(name string, migrations []string, stmts map[string]string,
 		sql := fmt.Sprintf(`INSERT INTO %[1]s (%[2]s) SELECT %[2]s FROM old.%[1]s`,
 			name, strings.Join(cols, ","))
 		if _, err := newTX.Exec(sql); err != nil {
-			return nil, fmt.Errorf("failed to copy data from table %q: %w", name, err)
+			return fmt.Errorf("failed to copy data from table %q: %w", name, err)
 		}
 	}
 	if err := newTX.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit rebuild tx: %w", err)
+		return fmt.Errorf("failed to commit rebuild tx: %w", err)
 	}
-	if err := cmp.Or(db.Close(), newDB.Close(), os.Rename(newName, name)); err != nil {
-		return nil, fmt.Errorf("failed to rename rebuilt db: %w", err)
-	}
-	return New(name, migrations, stmts, fs, ffw)
+	return nil
 }

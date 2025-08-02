@@ -25,13 +25,11 @@ static int tokenizer_create(void* pCtx, const char** azArg, int nArg, Fts5Tokeni
     return SQLITE_OK;
 }
 
-static void tokenizer_delete(Fts5Tokenizer* pTok) {
-    sqlite3_free(pTok);
-}
+static void tokenizer_delete(Fts5Tokenizer* pTok) {}
 
 static int tokenizer_tokenize(Fts5Tokenizer* pTok, void* pCtx, int flags, const char* pText, int nText, xToken cb) {
     return callTokenize((char*)pTok, pCtx, flags, (char*)pText, nText, (void*)cb);
-    }
+}
 
 static void process(const Fts5ExtensionApi *pApi, Fts5Context *pFts, sqlite3_context *pCtx, int nVal, sqlite3_value **apVal) {
     char *zName = (char*)pApi->xUserData(pFts);
@@ -122,7 +120,7 @@ int sqlite3_extension_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routi
     char *zNames = getTokenizers(), *zWalk = zNames;
     for (; *zWalk; zWalk += strlen(zWalk) + 1) {
         char *pName = sqlite3_mprintf("%s", zWalk);
-        pFtsApi->xCreateTokenizer(pFtsApi, pName, (void*)pName, &t, 0);
+        pFtsApi->xCreateTokenizer(pFtsApi, pName, (void*)pName, &t, sqlite3_free);
     }
     free(zNames);
     char *zProcessFuncNames = getProcessFuncs(), *zWalkPf = zProcessFuncNames;

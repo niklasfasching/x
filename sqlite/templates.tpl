@@ -79,7 +79,12 @@ func (v {{ $t.name }}) Schema() string {
     );
     {{ range $f := $t.fields }}
     {{ if $f.Fallback }}
-    CREATE TRIGGER {{ $t.name | lower }}s_set_default_{{ $f.Name | lower }}
+    CREATE TRIGGER {{ $t.name | lower }}s_insert_default_{{ $f.Name | lower }}
+    AFTER INSERT ON {{ $t.name | lower }}s FOR EACH ROW
+    WHEN new.{{ $f.Name | lower }} IS NULL OR new.{{ $f.Name | lower }} = 'null'
+    BEGIN UPDATE {{ $t.name | lower }}s SET {{ $f.Name | lower }} = '{{ $f.Fallback}}' WHERE id = new.id; END;
+
+    CREATE TRIGGER {{ $t.name | lower }}s_update_default_{{ $f.Name | lower }}
     AFTER UPDATE OF {{ $f.Name | lower}} ON {{ $t.name | lower }}s FOR EACH ROW
     WHEN new.{{ $f.Name | lower }} IS NULL OR new.{{ $f.Name | lower }} = 'null'
     BEGIN UPDATE {{ $t.name | lower }}s SET {{ $f.Name | lower }} = '{{ $f.Fallback}}' WHERE id = new.id; END;

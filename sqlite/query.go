@@ -131,9 +131,6 @@ func scan[T Type](rows *Rows) ([]T, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to scan rows: %w", err)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, fmt.Errorf("failed to close rows: %w", err)
-	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("failed to iterate rows: %w", err)
 	}

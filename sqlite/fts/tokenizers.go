@@ -64,7 +64,7 @@ func JSON(text string, flags int, cb func(token string, flags, start, end int) e
 	t, err := d.Token()
 	r, _ := t.(json.Delim)
 	if err != nil || (r != '[' && r != '{') {
-		return fmt.Errorf("not a json array/object: %q %v", text, t)
+		return fmt.Errorf("not a json array/object: %q %v %v", text, t, err)
 	}
 	for d.More() {
 		i, out := d.InputOffset(), ""
@@ -76,6 +76,9 @@ func JSON(text string, flags int, cb func(token string, flags, start, end int) e
 			v, err := d.Token()
 			if err != nil {
 				return fmt.Errorf("failed to parse object value: %w", err)
+			}
+			if v, _ := v.(json.Delim); v == '{' || v == '[' {
+				return fmt.Errorf("non-primitive object value for key %v (%v)", k, text)
 			}
 			// sqlite does not like [=:] tokens in unquoted fts queries. to keep
 			// prefix queries simple we'll go with another dot like char that's uncommon
