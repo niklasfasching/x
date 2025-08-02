@@ -8,10 +8,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>
     window.XScript = class XScript extends HTMLElement {
-      constructor(iframe, js) { Object.assign(super(), {iframe, js}) }
+      constructor(js) { Object.assign(super(), {js}) }
       connectedCallback() {
         if (window !== window.top) throw new Error("x-script is meant to apply on top frame");
-        new Function("iframe", "$", this.js + ";" + this.innerHTML)(this.iframe, this);
+        new Function("$", this.js + ";" + this.innerHTML)(this);
       }
     }
     customElements.define("x-script", XScript)
@@ -62,40 +62,48 @@
     }
     customElements.define("x-toast", XToast);
 
-    // heavily inspired by htmz
-    document.head.append(Object.assign(document.createElement("iframe"), {
-      name: "x",
-      hidden: true,
-      onload: ({target: iframe}) => {
-        if (iframe.contentWindow.location.href === "about:blank") return;
-        setTimeout(() => {
-          // TODO: https://stackoverflow.com/questions/220231/accessing-the-web-pages-http-headers-in-javascript
-          // use headers to redirect etc
-          const status = iframe.contentWindow.performance.getEntriesByType("navigation")[0].responseStatus;
-          if (status >= 300) {
-            const msg = `${iframe.contentWindow.location.pathname} (${status}): ${iframe.contentDocument.body.innerText}`;
-            return void document.body.append(new XToast(msg, "error"));
-          }
-          iframe.contentDocument.querySelectorAll("x-script, [x-act], [x-id], [x-sel]")?.forEach(el => {
-            if (el.tagName === "X-SCRIPT") return void document.head.append(Object.assign(el, {iframe}))
-            const act = el.getAttribute("x-act") || "replace",
-                  sel = el.getAttribute("x-sel"),
-                  id = el.getAttribute("x-id");
-            const targetEl = document.querySelector(sel || `[x-id="${id}"]`);
-            if (targetEl && act === "content") targetEl.replaceChildren(...el.childNodes);
-            else if (targetEl && act === "append") targetEl.append(el);
-            else if (targetEl && act === "replace") targetEl.replaceWith(el);
-            else console.error({sel, id, act, targetEl, el});
-          });
-          if (iframe.contentWindow.location.hash === "#push") {
-            history.pushState({}, null, iframe.contentWindow.location.href);
-          }
-          iframe.contentWindow.location.replace("about:blank");
-          iframe.remove();
-          document.head.appendChild(iframe);
+    // heavily inspired by htmz and triptych
+
+    function initForms() {
+      document.querySelectorAll("form").forEach(el => {
+        el.addEventListener("submit", executeAction)
+        el.submit = executeAction
+      })
+    }
+
+    if (document.readyState !== "loading") initForms();
+    else document.addEventListener("DOMContentLoaded", initForms);
+
+    async function executeAction(e) {
+      const url = new URL(this.action, location), opts = {method: this.getAttribute("method") || "get"};
+      const data = new FormData(this);
+      if (e) e.preventDefault();
+      if (e?.submitter) data.append(e.submitter.name, e.submitter.value);
+      try {
+        if (["POST", "PUT"].includes(opts.method.toUpperCase())) opts.body = data;
+        else url.search = new URLSearchParams(data);
+        const res = await fetch(url, opts)
+        const body = await res.text();
+        if (res.status >= 300) throw new Error(`${res.status}: ${body}`);
+        const tpl = Object.assign(document.createElement("template"), {innerHTML: body});
+        tpl.content.querySelectorAll("x-script, [x-act], [x-id], [x-sel]")?.forEach(el => {
+          if (el.tagName === "X-SCRIPT") return void document.head.append(el);
+          const act = el.getAttribute("x-act") || "replace",
+                sel = el.getAttribute("x-sel"),
+                id = el.getAttribute("x-id");
+          const targetEl = document.querySelector(sel || `[x-id="${id}"]`);
+          if (targetEl && act === "content") targetEl.replaceChildren(...el.childNodes);
+          else if (targetEl && act === "append") targetEl.append(el);
+          else if (targetEl && act === "replace") targetEl.replaceWith(el);
+          else console.error({sel, id, act, targetEl, el});
         });
-      },
-    }));
+        if (url.hash === "#push") history.pushState({}, null, url);
+        initForms()
+      } catch (err) {
+        const msg = `${url} (${opts.method}): ${err}`;
+        document.body.append(new XToast(msg, "error"));
+      }
+    }
     </script>
 
     {{ end }}
@@ -114,6 +122,12 @@
 {{ end }}
 
 
-{{ define "x-redirect" }}
-<meta x-sel="head" x-act="append" http-equiv="refresh" content="{{ . }}">
+{{ define "x-server-script" }}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <x-script>{{ . }}</x-script>
+  </head>
+</html>
 {{ end }}

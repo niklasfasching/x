@@ -193,7 +193,13 @@ func (c *Context) JSON(code int, v any) (any, error) {
 }
 
 func (c *Context) Redirect(code int, url string) error {
-	http.Redirect(c.ResponseWriter, c.Request, url, code)
+	if c.IsFragment() {
+		c.ExecuteTemplate(c.ResponseWriter, "x-server-script", template.JS(fmt.Sprintf(`
+          location.href = new URL(%q, location);
+        `, url)))
+	} else {
+		http.Redirect(c.ResponseWriter, c.Request, url, code)
+	}
 	return TemplateHandledErr
 }
 
