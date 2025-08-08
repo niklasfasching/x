@@ -33,6 +33,8 @@ type Map[T any] map[string]T
 type JSON struct{ V any }
 type Null[T any] struct{ V *T }
 
+var NoResultsErr = fmt.Errorf("empty results")
+
 func Exec(c Connection, q string, args ...any) (sql.Result, error) {
 	if stmt := c.Stmt(q); stmt != nil {
 		return stmt.Exec(args...)
@@ -118,7 +120,7 @@ func scanOne[T Type](rows *Rows) (T, error) {
 	if len(vs) == 1 && err == nil {
 		return vs[0], nil
 	}
-	return *new(T), errors.Join(err, fmt.Errorf("empty results"))
+	return *new(T), errors.Join(err, NoResultsErr)
 }
 
 func scan[T Type](rows *Rows) ([]T, error) {
