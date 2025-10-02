@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"iter"
 	"net/http"
 	"strings"
 
@@ -131,6 +132,14 @@ func (n *Node) Attribute(key string) string {
 	return ""
 }
 
+func (n *Node) Attributes() map[string]string {
+	m := map[string]string{}
+	for _, a := range n.Attr {
+		m[a.Key] = a.Val
+	}
+	return m
+}
+
 func (n *Node) SetAttribute(key, value string) {
 	if n == nil {
 		return
@@ -142,6 +151,32 @@ func (n *Node) SetAttribute(key, value string) {
 		}
 	}
 	n.Attr = append(n.Attr, html.Attribute{Key: key, Val: value})
+}
+
+// post-order depth first (unlike pre-order depth first in the html pkg)
+func (n *Node) Descendants() iter.Seq[*Node] {
+	return func(yield func(*Node) bool) { n.descendants(yield) }
+}
+
+func (n *Node) descendants(yield func(*Node) bool) bool {
+	if n == nil {
+		return false
+	}
+	for c := range n.ChildNodes() {
+		if !c.descendants(yield) || !yield(c) {
+			return false
+		}
+	}
+	return true
+}
+
+func (n *Node) ChildNodes() iter.Seq[*Node] {
+	return func(yield func(*Node) bool) {
+		if n != nil {
+			for c := n.FirstChild; c != nil && yield(AsNode(c)); c = c.NextSibling {
+			}
+		}
+	}
 }
 
 func (ns Nodes) Eq(i int) *Node {

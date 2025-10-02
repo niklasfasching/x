@@ -25,7 +25,15 @@ func (JSON) Unmarshal(bs []byte, v any) error {
 
 func (JSON) Ext() string { return ".json" }
 
-func (TXT) Marshal(v any) ([]byte, error) {
+func (t TXT) Marshal(v any) ([]byte, error) {
+	bs, err := t.marshal(v)
+	return bytes.TrimSpace(bs), err
+}
+
+func (t TXT) marshal(v any) ([]byte, error) {
+	if v, ok := v.(fmt.Stringer); ok {
+		return []byte(v.String()), nil
+	}
 	switch v := v.(type) {
 	case []byte:
 		return v, nil

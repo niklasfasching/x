@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/niklasfasching/x/css"
+	"github.com/niklasfasching/x/format/css"
 	"github.com/niklasfasching/x/soup"
 	"golang.org/x/net/html"
 )
