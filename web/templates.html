@@ -75,7 +75,9 @@
     else document.addEventListener("DOMContentLoaded", initForms);
 
     async function executeAction(e) {
-      const url = new URL(this.action, location), opts = {method: this.getAttribute("method") || "get"};
+      const action = e?.submitter.getAttribute("action") || this.action;
+      const method = e?.submitter.getAttribute("method") || this.getAttribute("method") || "get";
+      const url = new URL(action, location), opts = {method};
       const data = new FormData(this);
       if (e) e.preventDefault();
       if (e?.submitter) data.append(e.submitter.name, e.submitter.value);
