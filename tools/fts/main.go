@@ -5,6 +5,6 @@ package main
 
 import "C"
 
-import _ "github.com/niklasfasching/x/sqlite/fts"
+import _ "github.com/niklasfasching/x/sq/fts"
 
 func main() {}

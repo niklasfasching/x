@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
-	_ "github.com/niklasfasching/x/sqlite/fts"
+	_ "github.com/niklasfasching/x/sq/fts"
 )
 
 type queryTest struct {
