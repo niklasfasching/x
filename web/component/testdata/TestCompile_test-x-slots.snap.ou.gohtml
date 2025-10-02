@@ -1,0 +1,11 @@
+{{template ">test-x-slots>x-slots-1" dict "slots" (list (dict "name" ("header")) (dict "name" ("footer")))}}
+
+  <header><h1>Title</h1></header>
+  <rest>
+    rest
+    
+    <div>more rest</div>
+    
+  </rest>
+  {{range .slots}} {{. | _html_template_htmlescaper}} {{end}}
+  <footer>footer</footer>
