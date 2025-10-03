@@ -45,7 +45,8 @@ func Snap(t *testing.T, m Marshaller, namePartsAndValue ...any) {
 		updateOnce.Do(deleteSnaps(t))
 		writeSnap(t, name, path, m, v)
 	} else if actual, expected := Marshal(t, m, v), string(readSnap(t, path)); actual != expected {
-		t.Fatal("\n" + Diff(expected, actual, "\n").Render(true))
+		d, _ := Diff(expected, actual, "\n").Render(true)
+		t.Fatal("\n" + d)
 	}
 }
 
@@ -85,7 +86,8 @@ func (s *S) Snap(t *testing.T, k string, v any) {
 		}
 		s.snaps[k] = v
 	} else if actual, expected := s.Marshal(t, v), s.Marshal(t, s.snaps[k]); actual != expected {
-		t.Fatal("\n" + Diff(expected, actual, "\n").Render(true))
+		d, _ := Diff(expected, actual, "\n").Render(true)
+		t.Fatal("\n" + d)
 	}
 }
 

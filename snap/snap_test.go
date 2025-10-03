@@ -44,8 +44,8 @@ func TestDiff(t *testing.T) {
 	}
 
 	run := func(k, a, b string) {
-		d := Diff(a, b, "\n").Render(false)
-		s.Snap(t, k, map[string]string{"a": a, "b": b, "diff": d})
+		d, eq := Diff(a, b, "\n").Render(false)
+		s.Snap(t, k, map[string]any{"a": a, "b": b, "diff": d, "eq": eq})
 	}
 
 	run("insert", join(1, 2, 3, 3), join(1, 2, 3, 6, 3))
