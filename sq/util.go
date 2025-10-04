@@ -188,6 +188,7 @@ func (a Args) Render(tpl string) (string, []any, error) {
 		"quote":  a.quote,
 		"bind":   a.bind,
 		"values": a.values,
+		"cols":   a.cols,
 		"set":    a.set,
 	}).Parse(tpl)
 	if err != nil {
@@ -219,12 +220,29 @@ func (a Args) set(k string) (string, error) {
 	return a.vals(k, "=")
 }
 
-func (a Args) quote(k string) (string, error) {
-	name, _ := a[k].(string)
-	if !sqlNameRe.MatchString(name) {
-		return "", fmt.Errorf(".%s (%q) is not a valid sql identifier", k, name)
+func (a Args) cols(k string) (string, error) {
+	cols := a[k].([]string)
+	slices.Sort(cols)
+	cols = slices.Compact(cols)
+	for i, c := range cols {
+		if c, err := a.ident(c); err != nil {
+			return "", err
+		} else {
+			cols[i] = c
+		}
 	}
-	return "`" + name + "`", nil
+	return strings.Join(cols, ", "), nil
+}
+
+func (a Args) ident(v string) (string, error) {
+	if !sqlNameRe.MatchString(v) {
+		return "", fmt.Errorf("(%q) is not a valid sql identifier", v)
+	}
+	return "`" + v + "`", nil
+}
+
+func (a Args) quote(k string) (string, error) {
+	return a.ident(a[k].(string))
 }
 
 func (a Args) bind(k string) (string, error) {
