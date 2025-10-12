@@ -1,0 +1,17 @@
+<noscript name="directives/test-directives/nodes-to-html">
+  <div .class1 .class2 .class3 #id --css-var=1em></div>
+  <input type=checkbox checked?="{{ true }}">
+  <div .class="{{ true }}"></div>
+</noscript>
+
+<noscript name="directives/test-directives/compiled">
+  <div class=" class1 class2 class3" id=id style="; --css-var: 1em;"></div>
+  <input type=checkbox {{if true}}checked{{end}}>
+  <div class=" {{if true}}class{{end}}"></div>
+</noscript>
+
+<noscript name="directives/test-directives/executed">
+  <div class=" class1 class2 class3" id=id style="; --css-var: 1em;"></div>
+  <input type=checkbox checked>
+  <div class=" class"></div>
+</noscript>

@@ -1,0 +1,377 @@
+{
+  "nested/test-nested/calls": {
+    "<x-parent>": [
+      "<x-child>"
+    ],
+    "test-nested": [
+      "<x-child>",
+      "<x-parent>"
+    ]
+  },
+  "nested/test-nested/compiled:<x-child>#01": [
+    {
+      "Type": 3,
+      "Tag": "child",
+      "Text": "",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	  slot a of parent inside child:
+	  ",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        },
+        {
+          "Type": 3,
+          "Tag": "t:action",
+          "Text": "",
+          "Attrs": [
+            {
+              "Namespace": "",
+              "Key": "pipe",
+              "Val": "{{29}}"
+            }
+          ],
+          "SelfClosing": true,
+          "Children": null
+        },
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        }
+      ]
+    }
+  ],
+  "nested/test-nested/compiled:<x-parent>#01": [
+    {
+      "Type": 3,
+      "Tag": "parent",
+      "Text": "",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	  ",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        },
+        {
+          "Type": 3,
+          "Tag": "t:branch",
+          "Text": "",
+          "Attrs": [
+            {
+              "Namespace": "",
+              "Key": "pipe",
+              "Val": "{{31}}"
+            },
+            {
+              "Namespace": "",
+              "Key": "keyword",
+              "Val": "with"
+            }
+          ],
+          "SelfClosing": false,
+          "Children": [
+            {
+              "Type": 3,
+              "Tag": "t:list",
+              "Text": "",
+              "Attrs": [
+                {
+                  "Namespace": "",
+                  "Key": "kind",
+                  "Val": "then"
+                }
+              ],
+              "SelfClosing": false,
+              "Children": [
+                {
+                  "Type": 1,
+                  "Tag": "",
+                  "Text": "",
+                  "Attrs": null,
+                  "SelfClosing": false,
+                  "Children": null
+                },
+                {
+                  "Type": 1,
+                  "Tag": "",
+                  "Text": "
+	    ",
+                  "Attrs": null,
+                  "SelfClosing": false,
+                  "Children": null
+                },
+                {
+                  "Type": 3,
+                  "Tag": "t:branch",
+                  "Text": "",
+                  "Attrs": [
+                    {
+                      "Namespace": "",
+                      "Key": "pipe",
+                      "Val": "{{34}}"
+                    },
+                    {
+                      "Namespace": "",
+                      "Key": "keyword",
+                      "Val": "with"
+                    }
+                  ],
+                  "SelfClosing": false,
+                  "Children": [
+                    {
+                      "Type": 3,
+                      "Tag": "t:list",
+                      "Text": "",
+                      "Attrs": [
+                        {
+                          "Namespace": "",
+                          "Key": "kind",
+                          "Val": "then"
+                        }
+                      ],
+                      "SelfClosing": false,
+                      "Children": [
+                        {
+                          "Type": 1,
+                          "Tag": "",
+                          "Text": "",
+                          "Attrs": null,
+                          "SelfClosing": false,
+                          "Children": null
+                        },
+                        {
+                          "Type": 1,
+                          "Tag": "",
+                          "Text": "
+	      ",
+                          "Attrs": null,
+                          "SelfClosing": false,
+                          "Children": null
+                        },
+                        {
+                          "Type": 3,
+                          "Tag": "child",
+                          "Text": "",
+                          "Attrs": null,
+                          "SelfClosing": false,
+                          "Children": [
+                            {
+                              "Type": 1,
+                              "Tag": "",
+                              "Text": "
+	        slot a of parent inside child:
+	        ",
+                              "Attrs": null,
+                              "SelfClosing": false,
+                              "Children": null
+                            },
+                            {
+                              "Type": 3,
+                              "Tag": "t:branch",
+                              "Text": "",
+                              "Attrs": [
+                                {
+                                  "Namespace": "",
+                                  "Key": "pipe",
+                                  "Val": "{{37}}"
+                                },
+                                {
+                                  "Namespace": "",
+                                  "Key": "keyword",
+                                  "Val": "with"
+                                }
+                              ],
+                              "SelfClosing": false,
+                              "Children": [
+                                {
+                                  "Type": 3,
+                                  "Tag": "t:list",
+                                  "Text": "",
+                                  "Attrs": [
+                                    {
+                                      "Namespace": "",
+                                      "Key": "kind",
+                                      "Val": "then"
+                                    }
+                                  ],
+                                  "SelfClosing": false,
+                                  "Children": [
+                                    {
+                                      "Type": 1,
+                                      "Tag": "",
+                                      "Text": "",
+                                      "Attrs": null,
+                                      "SelfClosing": false,
+                                      "Children": null
+                                    },
+                                    {
+                                      "Type": 1,
+                                      "Tag": "",
+                                      "Text": "
+	          rest slot from callsite in parent:
+	          ",
+                                      "Attrs": null,
+                                      "SelfClosing": false,
+                                      "Children": null
+                                    },
+                                    {
+                                      "Type": 3,
+                                      "Tag": "t:action",
+                                      "Text": "",
+                                      "Attrs": [
+                                        {
+                                          "Namespace": "",
+                                          "Key": "pipe",
+                                          "Val": "{{40}}"
+                                        }
+                                      ],
+                                      "SelfClosing": true,
+                                      "Children": null
+                                    },
+                                    {
+                                      "Type": 1,
+                                      "Tag": "",
+                                      "Text": "
+	        ",
+                                      "Attrs": null,
+                                      "SelfClosing": false,
+                                      "Children": null
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "Type": 1,
+                              "Tag": "",
+                              "Text": "
+	      ",
+                              "Attrs": null,
+                              "SelfClosing": false,
+                              "Children": null
+                            }
+                          ]
+                        },
+                        {
+                          "Type": 1,
+                          "Tag": "",
+                          "Text": "
+	    ",
+                          "Attrs": null,
+                          "SelfClosing": false,
+                          "Children": null
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "Type": 1,
+                  "Tag": "",
+                  "Text": "
+	  ",
+                  "Attrs": null,
+                  "SelfClosing": false,
+                  "Children": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        }
+      ]
+    }
+  ],
+  "nested/test-nested/nodes": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "x-parent",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "foo",
+          "Val": "foo-value"
+        }
+      ],
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	    rest slot with value of a at x-parent callsite: ",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        },
+        {
+          "Type": 3,
+          "Tag": "t:action",
+          "Text": "",
+          "Attrs": [
+            {
+              "Namespace": "",
+              "Key": "pipe",
+              "Val": "{{2}}"
+            }
+          ],
+          "SelfClosing": true,
+          "Children": null
+        },
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	  ",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        }
+      ]
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    }
+  ]
+}

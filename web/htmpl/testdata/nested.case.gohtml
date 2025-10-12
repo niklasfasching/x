@@ -1,0 +1,24 @@
+{{ define "<x-child>" }}
+  <template>
+    <child>
+      slot a of parent inside child: {{ .slots.a }}
+    </child>
+  </template>
+{{ end }}
+q
+{{ define "<x-parent>" }}
+  <template>
+    <parent>
+      <x-child>
+        <slot name="a">rest slot from callsite in parent: {{ .slots.rest }}</slot>
+      </x-child>
+    </parent>
+  </template>
+{{ end }}
+
+
+{{ define "test-nested" }}
+  <x-parent foo="foo-value">
+    rest slot with value of a at x-parent callsite: {{ .a }}
+  </x-parent>
+{{ end }}

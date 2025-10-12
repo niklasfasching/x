@@ -1,0 +1,61 @@
+<noscript name="slot-scope/test-slot-scope/nodes-to-html">
+  value of a from callsite scope (outside component/slot):
+  {{ .a }}
+  == value-of-a
+  <x-component foo=foo-value>
+    <slot name=a>
+      value of a from callsite scope (inside slot):
+      {{ .a }}
+      == value-of-a
+    </slot>
+  </x-component>
+</noscript>
+
+<noscript name="slot-scope/test-slot-scope/compiled">
+  value of a from callsite scope (outside component/slot):
+  {{.a}}
+  == value-of-a
+  {{with $_dot_17 := .}}
+    {{with $ := (dict "slots" (list (dict "name" "a")) "foo" "foo-value")}}
+      - the component params can be accessed:
+      {{.foo}}
+      == foo-value
+      - slots have access to the parent scope
+      slots.a:
+      {{with $_dot_17}}
+        value of a from callsite scope (inside slot):
+        {{.a}}
+        == value-of-a
+      {{end}}
+    {{end}}
+  {{end}}
+</noscript>
+
+<noscript name="slot-scope/test-slot-scope/compiled:<x-component>">
+  - the component params can be accessed:
+  {{.foo}}
+  == foo-value
+      - slots have access to the parent scope
+      slots.a:
+  {{.slots.a}}
+</noscript>
+
+<noscript name="slot-scope/test-slot-scope/executed">
+  value of a from callsite scope (outside component/slot):
+  value-of-a
+  == value-of-a
+  
+    
+      - the component params can be accessed:
+      foo-value
+      == foo-value
+      - slots have access to the parent scope
+      slots.a:
+      
+        value of a from callsite scope (inside slot):
+        value-of-a
+        == value-of-a
+      
+    
+  
+</noscript>

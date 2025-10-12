@@ -1,0 +1,47 @@
+{{ define "<x-component>" }}
+  <template>
+    Each component must have a template; the html inside is what is inlined and rendered at each callsite.
+    The attributes passed to the component are available as fields on dot, e.g.
+    - static attributes: {{ .static }} == static-value
+    - mixed attributes: concatenated using print: {{ .mixed }} == foo-value-of-a-bar
+    - dynamic attributes: {{ .dynamic }} == value-of-a
+
+    In addition, slots from the call site are available as both variables and elements:
+    - Both named slots:
+    slots.a: {{ .slots.a }}
+    - And the rest:
+    slots.rest: {{ .slots.rest }}
+
+    range .slots:
+    {{ range .slots }}
+      name:{{ .name }} == a
+      other-field: {{ .otherField }} == value-of-other-field
+    {{ end }}
+  </template>
+
+  <script>
+  some script
+  </script>
+
+  <style>
+   some style
+  </style>
+
+  something else
+{{ end }}
+
+{{ define "test-x-component"  }}
+  <x-component static="static-value" mixed="foo-{{ .a }}-bar" dynamic="{{ .a }}">
+    <slot name="a" other-field="value-of-other-field">
+      content of <b>slot a</b>
+      value of parent a: {{ .a }} == value-of-a
+    </slot>
+    <div>
+      remaining content of
+    </div>
+    <p>
+      x-component at
+    </p>
+    the callsite
+  </x-component>
+{{ end }}

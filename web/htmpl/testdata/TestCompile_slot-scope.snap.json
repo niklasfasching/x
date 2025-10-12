@@ -1,0 +1,181 @@
+{
+  "slot-scope/test-slot-scope/calls": {
+    "test-slot-scope": [
+      "<x-component>"
+    ]
+  },
+  "slot-scope/test-slot-scope/compiled:<x-component>#01": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "- the component params can be accessed:
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{24}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	== foo-value
+	    - slots have access to the parent scope
+	    slots.a:
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{25}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    }
+  ],
+  "slot-scope/test-slot-scope/nodes": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  value of a from callsite scope (outside component/slot): ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{3}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": " == value-of-a
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "x-component",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "foo",
+          "Val": "foo-value"
+        }
+      ],
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	    ",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        },
+        {
+          "Type": 3,
+          "Tag": "slot",
+          "Text": "",
+          "Attrs": [
+            {
+              "Namespace": "",
+              "Key": "name",
+              "Val": "a"
+            }
+          ],
+          "SelfClosing": false,
+          "Children": [
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	      value of a from callsite scope (inside slot): ",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 3,
+              "Tag": "t:action",
+              "Text": "",
+              "Attrs": [
+                {
+                  "Namespace": "",
+                  "Key": "pipe",
+                  "Val": "{{4}}"
+                }
+              ],
+              "SelfClosing": true,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": " == value-of-a
+	    ",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            }
+          ]
+        },
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	  ",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        }
+      ]
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    }
+  ]
+}

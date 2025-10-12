@@ -1,0 +1,108 @@
+{
+  "directives/test-directives/calls": {},
+  "directives/test-directives/nodes": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "div",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": ".class1",
+          "Val": ""
+        },
+        {
+          "Namespace": "",
+          "Key": ".class2",
+          "Val": ""
+        },
+        {
+          "Namespace": "",
+          "Key": ".class3",
+          "Val": ""
+        },
+        {
+          "Namespace": "",
+          "Key": "#id",
+          "Val": ""
+        },
+        {
+          "Namespace": "",
+          "Key": "--css-var",
+          "Val": "1em"
+        }
+      ],
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "input",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "type",
+          "Val": "checkbox"
+        },
+        {
+          "Namespace": "",
+          "Key": "checked?",
+          "Val": "{{1}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "div",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": ".class",
+          "Val": "{{2}}"
+        }
+      ],
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    }
+  ]
+}

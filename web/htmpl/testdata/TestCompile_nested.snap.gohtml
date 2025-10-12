@@ -1,0 +1,75 @@
+<noscript name="nested/test-nested/nodes-to-html">
+  <x-parent foo=foo-value>
+    rest slot with value of a at x-parent callsite:
+    {{ .a }}
+  </x-parent>
+</noscript>
+
+<noscript name="nested/test-nested/compiled">
+  {{with $_dot_16 := .}}
+    {{with $ := (dict "slots" (list) "foo" "foo-value")}}
+      <parent>
+        {{with $_dot_11 := .}}
+          {{with $ := (dict "slots" (list (dict "name" "a")))}}
+            <child>
+              slot a of parent inside child:
+              {{with $_dot_11}}
+                rest slot from callsite in parent:
+                {{with $_dot_16}}
+                  rest slot with value of a at x-parent callsite:
+                  {{.a}}
+                {{end}}
+              {{end}}
+            </child>
+          {{end}}
+        {{end}}
+      </parent>
+    {{end}}
+  {{end}}
+</noscript>
+
+<noscript name="nested/test-nested/compiled:<x-child>">
+  <child>
+    slot a of parent inside child:
+    {{.slots.a}}
+  </child>
+</noscript>
+
+<noscript name="nested/test-nested/compiled:<x-parent>">
+  <parent>
+    {{with $_dot_11 := .}}
+      {{with $ := (dict "slots" (list (dict "name" "a")))}}
+        <child>
+          slot a of parent inside child:
+          {{with $_dot_11}}
+            rest slot from callsite in parent:
+            {{.slots.rest}}
+          {{end}}
+        </child>
+      {{end}}
+    {{end}}
+  </parent>
+</noscript>
+
+<noscript name="nested/test-nested/executed">
+  
+    
+      <parent>
+        
+          
+            <child>
+              slot a of parent inside child:
+              
+                rest slot from callsite in parent:
+                
+                  rest slot with value of a at x-parent callsite:
+                  value-of-a
+                
+              
+            </child>
+          
+        
+      </parent>
+    
+  
+</noscript>

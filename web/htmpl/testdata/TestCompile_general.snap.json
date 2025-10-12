@@ -1,0 +1,447 @@
+{
+  "general/test-x-component/calls": {
+    "test-x-component": [
+      "<x-component>"
+    ]
+  },
+  "general/test-x-component/compiled:<x-component>#01": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "Each component must have a template; the html inside is what is inlined and rendered at each callsite.
+	    The attributes passed to the component are available as fields on dot, e.g.
+	    - static attributes:
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{67}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	== static-value
+	    - mixed attributes: concatenated using print:
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{68}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	== foo-value-of-a-bar
+	    - dynamic attributes:
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{69}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	== value-of-a
+	
+	    In addition, slots from the call site are available as both variables and elements:
+	    - Both named slots:
+	    slots.a:
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{70}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	- And the rest:
+	    slots.rest:
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{71}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	range .slots:
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:branch",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{72}}"
+        },
+        {
+          "Namespace": "",
+          "Key": "keyword",
+          "Val": "range"
+        }
+      ],
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 3,
+          "Tag": "t:list",
+          "Text": "",
+          "Attrs": [
+            {
+              "Namespace": "",
+              "Key": "kind",
+              "Val": "then"
+            }
+          ],
+          "SelfClosing": false,
+          "Children": [
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	  name:
+	  ",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 3,
+              "Tag": "t:action",
+              "Text": "",
+              "Attrs": [
+                {
+                  "Namespace": "",
+                  "Key": "pipe",
+                  "Val": "{{76}}"
+                }
+              ],
+              "SelfClosing": true,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	  == a
+	      other-field:
+	  ",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 3,
+              "Tag": "t:action",
+              "Text": "",
+              "Attrs": [
+                {
+                  "Namespace": "",
+                  "Key": "pipe",
+                  "Val": "{{77}}"
+                }
+              ],
+              "SelfClosing": true,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	  == value-of-other-field
+	",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "general/test-x-component/nodes": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "x-component",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "static",
+          "Val": "static-value"
+        },
+        {
+          "Namespace": "",
+          "Key": "mixed",
+          "Val": "foo-{{1}}-bar"
+        },
+        {
+          "Namespace": "",
+          "Key": "dynamic",
+          "Val": "{{2}}"
+        }
+      ],
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	    ",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        },
+        {
+          "Type": 3,
+          "Tag": "slot",
+          "Text": "",
+          "Attrs": [
+            {
+              "Namespace": "",
+              "Key": "name",
+              "Val": "a"
+            },
+            {
+              "Namespace": "",
+              "Key": "other-field",
+              "Val": "value-of-other-field"
+            }
+          ],
+          "SelfClosing": false,
+          "Children": [
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	      content of ",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 3,
+              "Tag": "b",
+              "Text": "",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": [
+                {
+                  "Type": 1,
+                  "Tag": "",
+                  "Text": "slot a",
+                  "Attrs": null,
+                  "SelfClosing": false,
+                  "Children": null
+                }
+              ]
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	      value of parent a: ",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 3,
+              "Tag": "t:action",
+              "Text": "",
+              "Attrs": [
+                {
+                  "Namespace": "",
+                  "Key": "pipe",
+                  "Val": "{{4}}"
+                }
+              ],
+              "SelfClosing": true,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": " == value-of-a
+	    ",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            }
+          ]
+        },
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	    ",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        },
+        {
+          "Type": 3,
+          "Tag": "div",
+          "Text": "",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": [
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	      remaining content of
+	    ",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            }
+          ]
+        },
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	    ",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        },
+        {
+          "Type": 3,
+          "Tag": "p",
+          "Text": "",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": [
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	      x-component at
+	    ",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            }
+          ]
+        },
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	    the callsite
+	  ",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        }
+      ]
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    }
+  ]
+}

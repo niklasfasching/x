@@ -1,0 +1,5 @@
+{{ define "test-directives" }}
+  <div .class1 .class2 .class3 #id --css-var="1em"></div>
+  <input type="checkbox" checked?="{{ true }}">
+  <div .class="{{ true }}"></div>
+{{ end }}

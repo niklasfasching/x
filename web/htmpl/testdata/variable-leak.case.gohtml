@@ -1,0 +1,13 @@
+{{ define "<x-scope-leak>" }}
+  <template>
+    foo accessed from inlined component: {{ $foo }}. THIS SHOULD FAIL
+  </template>
+{{ end }}
+
+
+{{ define "test-scope-leak" }}
+  variables defined in the parent scope should not be accessible from inlined components
+  and rather fail compilation (sanity check test)
+  {{ $foo := 10 }}
+  <x-scope-leak></x-scope-leak>
+{{ end }}

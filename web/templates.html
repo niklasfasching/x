@@ -1,4 +1,4 @@
-{{ define "x-html" }}
+{{ define "html" }}
 <!DOCTYPE html>
 <html lang="en">
   {{ if not .IsFragment }}
@@ -6,130 +6,66 @@
     {{ block "x-head-defaults" . }}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script>
-    window.XScript = class XScript extends HTMLElement {
-      constructor(js) { Object.assign(super(), {js}) }
-      connectedCallback() {
-        if (window !== window.top) throw new Error("x-script is meant to apply on top frame");
-        new Function("$", this.js + ";" + this.innerHTML)(this);
-      }
+    <script type="module">
+    window.$submit = function(event, delay) {
+      if (!delay) return void event.target.form.requestSubmit();
+      clearTimeout(event.target._debounce);
+      event.target._debounce = setTimeout(() => event.target.form.requestSubmit(), delay);
     }
-    customElements.define("x-script", XScript)
-    window.XToast = class XToast extends HTMLElement {
-      constructor(msg, ...classes) {
-        super()
-        this.attachShadow({mode: "open"}).innerHTML = `
-          <style>
-           :host(.error) details {
-             background: #f8d7da;
-             color: #a72334;
-           }
-           details {
-             display: block;
-             width: 50vw;
-             padding: 1em;
-             border-radius: .5em;
-             box-shadow: 0 .3em 1em #0004;
-             background: #e9ecef;
-             color: #495057;
-             position: absolute;
-             top: 1em;
-             right: 1em;
-           }
-           details:not([open]) {
-             display: none;
-           }
-           summary {
-             list-style: none;
-             float: right;
-             cursor: pointer;
-             font-weight: bold;
-           }
-           pre {
-             white-space: pre-wrap;
-             word-wrap: break-word;
-             padding-right: 2rem;
-             margin-top: 0;
-           }
-          </style>
-          <details open>
-            <summary>close</summary>
-            <pre><slot></slot></pre>
-          </details>`;
-        this.shadowRoot.querySelector("details > pre").append(msg || "");
-        this.classList.add(...classes);
-      }
-    }
-    customElements.define("x-toast", XToast);
 
     // heavily inspired by htmz and triptych
-
-    function initForms() {
-      document.querySelectorAll("form").forEach(el => {
-        el.addEventListener("submit", executeAction)
-        el.submit = executeAction
-      })
-    }
-
-    if (document.readyState !== "loading") initForms();
-    else document.addEventListener("DOMContentLoaded", initForms);
-
-    async function executeAction(e) {
-      const action = e?.submitter.getAttribute("action") || this.action;
-      const method = e?.submitter.getAttribute("method") || this.getAttribute("method") || "get";
-      const url = new URL(action, location), opts = {method};
-      const data = new FormData(this);
-      if (e) e.preventDefault();
-      if (e?.submitter) data.append(e.submitter.name, e.submitter.value);
+    const submit = async (el, url, method, data) => {
+      const opts = {method: method || "GET"};
+      if (opts.method.toUpperCase() !== "GET") opts.body = data;
+      else url.search = new URLSearchParams(data);
       try {
-        if (["POST", "PUT"].includes(opts.method.toUpperCase())) opts.body = data;
-        else url.search = new URLSearchParams(data);
-        const res = await fetch(url, opts)
-        const body = await res.text();
-        if (res.status >= 300) throw new Error(`${res.status}: ${body}`);
-        const tpl = Object.assign(document.createElement("template"), {innerHTML: body});
-        tpl.content.querySelectorAll("x-script, [x-act], [x-id], [x-sel]")?.forEach(el => {
-          if (el.tagName === "X-SCRIPT") return void document.head.append(el);
-          const act = el.getAttribute("x-act") || "replace",
-                sel = el.getAttribute("x-sel"),
-                id = el.getAttribute("x-id");
-          const targetEl = document.querySelector(sel || `[x-id="${id}"]`);
-          if (targetEl && act === "content") targetEl.replaceChildren(...el.childNodes);
-          else if (targetEl && act === "append") targetEl.append(el);
-          else if (targetEl && act === "replace") targetEl.replaceWith(el);
-          else console.error({sel, id, act, targetEl, el});
+        el.classList.add("x-fetch");
+        const res = await fetch(url, opts);
+        const innerHTML = await res.text();
+        if (!res.ok) throw new Error(`${res.status}: ${innerHTML}`);
+        if (res.headers.get('x-redirect')) {
+          return void (location.href = res.headers.get('x-redirect'));
+        }
+        const t = Object.assign(document.createElement("template"), {innerHTML});
+        t.content.querySelectorAll("[x-id]").forEach((el) => {
+          document.querySelector(`[x-id="${el.getAttribute("x-id")}"]`)?.replaceWith(el);
+        });
+        t.content.querySelectorAll('script[x-script]').forEach(({textContent}) => {
+          document.head.append(Object.assign(document.createElement("script"), {textContent}));
         });
         if (url.hash === "#push") history.pushState({}, null, url);
-        initForms()
       } catch (err) {
-        const msg = `${url} (${opts.method}): ${err}`;
-        document.body.append(new XToast(msg, "error"));
+        alert(`Action failed: ${opts.method.toUpperCase()} ${url.pathname}: ${err}`);
+      } finally {
+        el.classList.remove("x-fetch");
       }
     }
-    </script>
 
+    document.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const form = e.target, submitter = e.submitter;
+      const action = submitter?.getAttribute("action") || form.action;
+      const method = submitter?.getAttribute("method") || form.method;
+      const data = new FormData(form);
+      if (submitter?.name) data.append(submitter.name, submitter.value);
+      submit(form, new URL(action, location), method, data);
+    });
+
+    document.addEventListener("click", (e) => {
+      const button = e.target.closest("button");
+      if (!button || button.closest("form") || !button.hasAttribute("action")) return;
+      e.preventDefault();
+      const data = new FormData(), action = button.getAttribute("action");
+      if (button.name) data.append(button.name, button.value);
+      submit(button, new URL(action, location), button.getAttribute("method"), data);
+    })
+    </script>
     {{ end }}
-    {{ block "x-head" . }}{{ end }}
+    {{ block "head" . }}{{ end }}
   </head>
   {{ end }}
   <body>
     {{ block "body" . }}{{ end }}
   </body>
-</html>
-{{ end }}
-
-
-{{ define "x-error" }}
-<x-toast x-sel="body" x-act="append" class="error">{{ index .Form.err 0 }}</x-toast>
-{{ end }}
-
-
-{{ define "x-server-script" }}
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <x-script>{{ . }}</x-script>
-  </head>
 </html>
 {{ end }}

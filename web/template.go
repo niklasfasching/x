@@ -2,7 +2,6 @@ package web
 
 import (
 	"bytes"
-	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,13 +10,11 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"path/filepath"
 	"reflect"
 	"regexp"
+	"runtime/debug"
 	"strings"
 
-	"github.com/niklasfasching/x/web/component"
-	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 )
 
@@ -29,35 +26,8 @@ type Context struct {
 	*bytes.Buffer
 }
 
-//go:embed templates.html
-var templates string
-var Funcs = template.FuncMap{
-	"get": func(m map[string]any, k string) map[string]any {
-		if m == nil {
-			return nil
-		} else if _, ok := m[k]; !ok {
-			return nil
-		}
-		return map[string]any{k: m[k]}
-	},
-	"keys": func(m map[string]any) []string { return maps.Keys(m) },
-	"join": strings.Join,
-	"log": func(args ...any) string {
-		log.Println(args...)
-		return ""
-	},
-	"json": func(v any) (string, error) {
-		bs, err := json.MarshalIndent(v, "", "  ")
-		return string(bs), err
-	},
-	"html": func(v string) template.HTML { return template.HTML(v) },
-}
 var TemplateExitErr = fmt.Errorf("render partial template")
 var TemplateHandledErr = fmt.Errorf("skip template rendering")
-var tplExt = ".gohtml"
-var tplLibPrefix = "_"
-var tplTestPrefix = "test"
-var pathPatternRe = regexp.MustCompile(`{(\w+)[.]*}`)
 var camelToKebabRe = regexp.MustCompile("([a-z0-9])([A-Z])")
 
 func TemplateHandler(t *template.Template, tfs fs.FS, dev bool) http.Handler {
@@ -65,79 +35,15 @@ func TemplateHandler(t *template.Template, tfs fs.FS, dev bool) http.Handler {
 		return templateHandler(t, tfs, dev)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				w.WriteHeader(500)
+				fmt.Fprintf(w, "%v", err)
+				log.Println(err, string(debug.Stack()))
+			}
+		}()
 		templateHandler(t, tfs, dev).ServeHTTP(w, r)
 	})
-}
-
-func templateHandler(t *template.Template, tfs fs.FS, dev bool) http.Handler {
-	t, err := t.Clone()
-	if err != nil {
-		panic(fmt.Errorf("failed to clone base template: %w", err))
-	}
-	t = template.Must(t.New("").Option("missingkey=error").Funcs(Funcs).Parse(templates))
-	ts, err := LoadTemplates(t, tfs, dev)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse templates: %w", err))
-	}
-	mux := &http.ServeMux{}
-	mux.Handle("/", http.FileServer(&FilterFS{http.FS(tfs), func(name string) bool {
-		return strings.HasSuffix(name, tplExt)
-	}}))
-	for _, t := range ts {
-		for _, t := range t.Templates() {
-			name, pathKeys := strings.Split(t.Name(), " "), []string{}
-			if slices.Contains([]string{"GET", "POST"}, name[0]) || strings.HasPrefix(name[0], "/") {
-				for _, m := range pathPatternRe.FindAllStringSubmatch(name[len(name)-1], -1) {
-					pathKeys = append(pathKeys, m[1])
-				}
-				mux.HandleFunc(t.Name(), func(w http.ResponseWriter, r *http.Request) {
-					ServeTemplate(t, pathKeys, w, r)
-				})
-			}
-		}
-	}
-	return mux
-}
-
-func LoadTemplates(base *template.Template, tfs fs.FS, includeTest bool) (map[string]*template.Template, error) {
-	entrypoints, libs := []string{}, []string{}
-	err := fs.WalkDir(tfs, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || filepath.Ext(path) != tplExt {
-			return err
-		}
-		if name := filepath.Base(path); strings.HasPrefix(name, "_") {
-			libs = append(libs, path)
-		} else if includeTest || (name != tplTestPrefix+tplExt && !strings.HasPrefix(name, tplTestPrefix+"_")) {
-			entrypoints = append(entrypoints, path)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to walk templates: %w", err)
-	}
-	tpls := make(map[string]*template.Template)
-	for _, path := range entrypoints {
-		dir, paths := filepath.Dir(path), []string{}
-		for _, lib := range libs {
-			if strings.HasPrefix(dir, filepath.Dir(lib)) {
-				paths = append(paths, lib)
-			}
-		}
-		paths = append(paths, path)
-		tpl, err := base.Clone()
-		if err != nil {
-			return nil, fmt.Errorf("failed to clone base template: %w", err)
-		}
-		tpl, err = tpl.ParseFS(tfs, paths...)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse %s: %w", paths, err)
-		}
-		if err := component.Compile(tpl, true); err != nil {
-			return nil, err
-		}
-		tpls[strings.TrimSuffix(path, tplExt)] = tpl
-	}
-	return tpls, nil
 }
 
 func ServeTemplate(t *template.Template, pathKeys []string, w http.ResponseWriter, r *http.Request) {
@@ -145,17 +51,18 @@ func ServeTemplate(t *template.Template, pathKeys []string, w http.ResponseWrite
 		c.ResponseWriter.WriteHeader(400)
 		fmt.Fprintf(c.ResponseWriter, "%s", err)
 	} else if err := c.Execute(c.Buffer, c); errors.Is(err, TemplateHandledErr) {
+		return
 	} else if err == nil || errors.Is(err, TemplateExitErr) {
-		c.ResponseWriter.Header().Set("Content-Type", "text/html")
 		c.WriteTo(c.ResponseWriter)
 	} else {
+		log.Println(t.Name(), err)
 		c.ResponseWriter.WriteHeader(500)
 		fmt.Fprintf(c.ResponseWriter, "%s", err)
 	}
 }
 
 func NewContext(t *template.Template, pathKeys []string, w http.ResponseWriter, r *http.Request) (*Context, error) {
-	t, err := t.Clone()
+	t, err := t.Clone() // TODO: why clone
 	c := &Context{nil, r, w, t, &bytes.Buffer{}}
 	if err != nil {
 		return c, fmt.Errorf("failed to clone template: %w", err)
@@ -207,15 +114,14 @@ func (c *Context) JSON(code int, v any) (any, error) {
 		return TemplateHandledErr, err
 	}
 	c.WriteHeader(code)
+	c.ResponseWriter.Header().Set("Content-Type", "application/json")
 	c.ResponseWriter.Write(bs)
 	return TemplateHandledErr, TemplateHandledErr
 }
 
 func (c *Context) Redirect(code int, url string) error {
 	if c.IsFragment() {
-		c.ExecuteTemplate(c.ResponseWriter, "x-server-script", template.JS(fmt.Sprintf(`
-          location.href = new URL(%q, location);
-        `, url)))
+		c.ResponseWriter.Header().Set("x-redirect", url)
 	} else {
 		http.Redirect(c.ResponseWriter, c.Request, url, code)
 	}
@@ -223,23 +129,7 @@ func (c *Context) Redirect(code int, url string) error {
 }
 
 func (c *Context) Query(kvs ...string) any {
-	m, _ := url.ParseQuery(c.Form.Encode())
-	for i := 0; i < len(kvs)-1; i += 2 {
-		k, v := kvs[i], kvs[i+1]
-		switch k[0] {
-		case '~':
-			m[k[1:]] = []string{strings.ReplaceAll(v, "%s", strings.Join(m[k[1:]], " "))}
-		case '+':
-			m[k[1:]] = append(m[k[1:]], v)
-			slices.Sort(m[k[1:]])
-			m[k[1:]] = slices.Compact(m[k[1:]])
-		case '-':
-			m[k[1:]] = slices.DeleteFunc(m[k[1:]], func(v2 string) bool { return v == v2 })
-		default:
-			m[k] = []string{v}
-		}
-	}
-	return template.URL(m.Encode())
+	return query(c.Form.Encode(), kvs...)
 }
 
 func (c *Context) Decode(v any) error {
@@ -252,7 +142,10 @@ func (c *Context) Decode(v any) error {
 		if tag == "-" {
 			continue
 		}
-		k := strings.ToLower(camelToKebabRe.ReplaceAllString(ft.Name, "${1}-${2}"))
+		k := strings.ToLower(ft.Name[:1]) + ft.Name[1:]
+		if _, ok := c.Form[k]; !ok {
+			k = strings.ToLower(camelToKebabRe.ReplaceAllString(ft.Name, "${1}-${2}"))
+		}
 		if vs, ok := c.Form[k]; ok && len(vs) > 0 {
 			if err := setFormValue(fv, vs); err != nil {
 				return err
@@ -290,4 +183,24 @@ func setFormValue(rv reflect.Value, vs []string) error {
 		return json.Unmarshal([]byte(vs[0]), rv.Addr().Interface())
 	}
 	return nil
+}
+
+func query(q string, kvs ...string) any {
+	m, _ := url.ParseQuery(q)
+	for i := 0; i < len(kvs)-1; i += 2 {
+		k, v := kvs[i], kvs[i+1]
+		switch k[0] {
+		case '~':
+			m[k[1:]] = []string{strings.ReplaceAll(v, "%s", strings.Join(m[k[1:]], " "))}
+		case '+':
+			m[k[1:]] = append(m[k[1:]], v)
+			slices.Sort(m[k[1:]])
+			m[k[1:]] = slices.Compact(m[k[1:]])
+		case '-':
+			m[k[1:]] = slices.DeleteFunc(m[k[1:]], func(v2 string) bool { return v == v2 })
+		default:
+			m[k] = []string{v}
+		}
+	}
+	return template.URL(m.Encode())
 }

@@ -1,5 +1,0 @@
-{{template "x-attrs" dict "slots" (list) "static" ("static") "mixed" (print "foo" (.class) "bar") "dynamic" (.class)}}
-
-  <p static={{.static | _html_template_nospaceescaper}} mixed="{{.mixed | _html_template_attrescaper}}" dynamic="{{.dynamic | _html_template_attrescaper}}">
-    Hello
-  </p>

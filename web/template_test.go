@@ -1,12 +1,11 @@
 package web
 
 import (
-	"bytes"
 	"html/template"
 	"net/http"
 	"net/url"
-	"os"
 	"testing"
+	"testing/fstest"
 
 	"github.com/niklasfasching/x/snap"
 )
@@ -43,51 +42,27 @@ func TestDecode(t *testing.T) {
 	if err := c.Decode(&v); err != nil {
 		t.Fatal("decode", err)
 	}
-	snap.Snap(t, snap.JSON{}, v)
+	snap.Snap(t, v)
 }
 
-func TestShortCode(t *testing.T) {
-	base := template.Must(template.New("").Parse(""))
-	ts, err := LoadTemplates(base, os.DirFS("./testdata/"), true)
+func TestFindTemplateSets(t *testing.T) {
+	fs, paths := fstest.MapFS{}, []string{
+		"app.gohtml",
+		"misc.gohtml",
+		"misc.foo.gohtml", // should be ignored
+		"_lib.gohtml",
+		"_lib/misc.gohtml",
+		"item/_lib.gohtml",
+		"item/_lib/misc.gohtml",
+		"item/main.gohtml",
+		"other/main.gohtml",
+	}
+	for _, p := range paths {
+		fs[p] = &fstest.MapFile{}
+	}
+	sets, err := findTemplateSets(fs, []string{".gohtml"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	tpl := ts["el"]
-	w := &bytes.Buffer{}
-	if err := tpl.Lookup("el-test").Execute(w, nil); err != nil {
-		t.Fatal(err)
-	}
-	snap.Snap(t, snap.TXT{}, w.String())
+	snap.Snap(t, sets)
 }
-
-// func TestServe(t *testing.T) {
-// 	db, err := sqlite.New(":memory:", []string{`
-//       CREATE TABLE docs (title, tags);
-//       INSERT INTO docs (title, tags) VALUES ('doc one', '[1, 2]');
-//       INSERT INTO docs (title, tags) VALUES ('doc two', '[2, 3]');`,
-// 	}, nil, nil)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	tp := template.New("").Funcs(sqlite.FuncMap(db))
-// 	h := TemplateHandler(tp, os.DirFS("."), true)
-// 	m := &http.ServeMux{}
-// 	m.Handle("/{template...}", h)
-// 	patterns := []string{
-// 		"/tpl/{template...}",
-// 		"/b/o/{objectname...}",
-// 		"/b/{#bucket}/o/{objectname...}/{$}",
-// 	}
-// 	// pathvalues, parser
-// 	for _, pattern := range patterns {
-// 		m.Handle(pattern, h)
-// 		log.Println(pattern)
-// 		for _, m := range pathPatternRe.FindAllStringSubmatch(pattern, -1) {
-// 			log.Println("\t", m[1])
-
-// 		}
-
-// 	}
-
-// 	// http.ListenAndServe(":5000", m)
-// }

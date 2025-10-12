@@ -1,5 +1,0 @@
-{{with dict "slots" (list) "text" ("nested text")}}
-  <div>{{with dict "slots" (list) "text" (.text)}}
-  <i>{{.text | _html_template_htmlescaper}}</i>
-{{end}}</div>
-{{end}}

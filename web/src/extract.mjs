@@ -25,7 +25,7 @@ export class Extractor {
     await Promise.all([...document.querySelectorAll("img")].map(img => this.inlineIMG(img)))
     document.querySelectorAll("svg").forEach(img => this.inlineSVG(img));
     const meta = this.parseMeta(document);
-    document.querySelectorAll("style, form").forEach(el => el.remove())
+    document.querySelectorAll("style, form, button").forEach(el => el.remove()) // TODO: keep buttons?
     const candidates = this.candidates(document);
     if (this.debug) console.log(candidates.length)
     for (let el of candidates.slice(0,5)) {

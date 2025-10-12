@@ -1,9 +1,0 @@
-{
-  "ID": 42,
-  "Tags": [
-    "foo",
-    "bar"
-  ],
-  "IncludeArchived": true,
-  "Excluded": ""
-}
