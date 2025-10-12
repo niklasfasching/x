@@ -17,9 +17,9 @@ type Op struct {
 }
 
 func (ops Ops) Render(color bool) (string, bool) {
-	w, cs, eq := &strings.Builder{}, map[string]int{"=": 37, "-": 31, "+": 32}, true
+	w, cs, d := &strings.Builder{}, map[string]int{"=": 37, "-": 31, "+": 32}, false
 	for _, op := range ops {
-		eq = eq || op.Type != "="
+		d = d || op.Type != "="
 		for _, v := range op.Vs {
 			if s := fmt.Sprintf("%s %s", op.Type, v); !color {
 				fmt.Fprintf(w, "%s\n", s)
@@ -28,7 +28,7 @@ func (ops Ops) Render(color bool) (string, bool) {
 			}
 		}
 	}
-	return w.String(), eq
+	return w.String(), !d
 }
 
 func Diff(v1, v2, sep string) Ops {

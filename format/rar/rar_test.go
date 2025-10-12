@@ -33,7 +33,7 @@ func testRAR(t *testing.T, filename, version string) {
 	if err != nil {
 		t.Fatal("failed to read", err)
 	}
-	snap.Snap(t, snap.JSON{}, []any{r, r.Name, string(bs)})
+	snap.Snap(t, []any{r, r.Name, string(bs)})
 }
 
 func ensureTestRAR(t *testing.T, filename, version string) {

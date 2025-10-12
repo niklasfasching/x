@@ -29,7 +29,7 @@ func TestMKV(t *testing.T) {
 			c.BlockGroups[i].Block = fmt.Sprintf("len:%d", len(g.Block))
 		}
 	}
-	snap.Snap(t, snap.JSON{}, m)
+	snap.Snap(t, m)
 }
 
 func ensureTestMKV(t *testing.T, filename string) {

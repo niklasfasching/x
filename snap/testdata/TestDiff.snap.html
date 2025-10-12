@@ -1,27 +1,26 @@
-complex: 
+<noscript name="insert">
   a: |
     1
     2
     3
     3
   b: |
-    4
     1
     2
-    5
     3
     6
     3
   diff: |
-    + 4
     = 1
     = 2
-    + 5
     = 3
     + 6
     = 3
     
-delete: 
+  eq: false
+</noscript>
+
+<noscript name="delete">
   a: |
     1
     2
@@ -37,26 +36,10 @@ delete:
     = 3
     = 3
     
-insert: 
-  a: |
-    1
-    2
-    3
-    3
-  b: |
-    1
-    2
-    3
-    6
-    3
-  diff: |
-    = 1
-    = 2
-    = 3
-    + 6
-    = 3
-    
-replace: 
+  eq: false
+</noscript>
+
+<noscript name="replace">
   a: |
     1
     2
@@ -75,3 +58,31 @@ replace:
     + 5
     + 6
     
+  eq: false
+</noscript>
+
+<noscript name="complex">
+  a: |
+    1
+    2
+    3
+    3
+  b: |
+    4
+    1
+    2
+    5
+    3
+    6
+    3
+  diff: |
+    + 4
+    = 1
+    = 2
+    + 5
+    = 3
+    + 6
+    = 3
+    
+  eq: false
+</noscript>

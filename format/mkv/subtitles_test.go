@@ -48,7 +48,7 @@ func testSubWriter(t *testing.T, cued bool) {
 		t.Fatal(err)
 	}
 	subs3 := nextSubs[:]
-	snap.Snap(t, snap.JSON{}, map[string]any{
+	snap.Snap(t, map[string]any{
 		"mkv": map[string]any{
 			"info":   r.MKV.Segment.Info,
 			"cues":   len(r.MKV.Segment.Cues.Points),

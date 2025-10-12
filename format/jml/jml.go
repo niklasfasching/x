@@ -30,9 +30,11 @@ type token struct {
 	index, lvl int
 }
 
-type JML struct{}
+type JML struct{ V any }
 
 const digits = "0123456789"
+
+func (j *JML) MarshalText() ([]byte, error) { return Marshal(j.V) }
 
 func Unmarshal(jml []byte, v interface{}) error {
 	jl := &jmlLexer{lexer{in: string(jml)}}
@@ -400,7 +402,3 @@ func (l *lexer) errorf(format string, args ...interface{}) lexFn {
 	l.ts = append(l.ts, token{"err", fmt.Sprintf(format, args...), l.start, l.lvl})
 	return nil
 }
-
-func (JML) Marshal(v any) ([]byte, error)    { return Marshal(v) }
-func (JML) Unmarshal(bs []byte, v any) error { return Unmarshal(bs, v) }
-func (JML) Ext() string                      { return ".yml" }

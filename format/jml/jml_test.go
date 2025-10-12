@@ -16,7 +16,7 @@ func RoundTrip(t *testing.T, bs []byte) {
 	} else {
 		asJSON = string(bs)
 	}
-	snap.Snap(t, snap.TXT{}, ".json", asJSON)
+	snap.KeyedSnap(t, "json", json.RawMessage(asJSON))
 	if failed {
 		return
 	}
@@ -25,7 +25,7 @@ func RoundTrip(t *testing.T, bs []byte) {
 	if err != nil {
 		asJML = "jml marshal: " + err.Error()
 	}
-	snap.Snap(t, snap.TXT{}, ".yml", asJML)
+	snap.KeyedSnap(t, "jml", asJML)
 }
 
 func TestCases(t *testing.T) {
