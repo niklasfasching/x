@@ -58,6 +58,7 @@ func New(uri string, migrations []string, fs map[string]any, ffw bool) (*DB, err
 		return nil, err
 	}
 	defer os.Remove(newName)
+	defer newDB.Close()
 	if err := Copy(oldName, d, newDB); err != nil {
 		return nil, err
 	} else if err := errors.Join(db.Close(), newDB.Close(), os.Rename(newName, oldName)); err != nil {
@@ -70,12 +71,29 @@ func NewTable[T any](db *DB, name, idCol string) (*Table[T], error) {
 	return &Table[T]{name, normalizedCol(idCol), db}, nil
 }
 
+func (t *Table[T]) Count(conds string, args ...any) (int, error) {
+	n, err := QueryOne[int](t.DB, "SELECT count(1) FROM `"+t.name+"` WHERE "+conds, args...)
+	return n, err
+}
+
 func (t *Table[T]) Insert(or string, v T) (int64, error) {
 	idK, idV, kvs := RowMap(v)
 	if rv := reflect.ValueOf(idV); !rv.IsZero() {
 		kvs[idK] = idV
 	}
 	return Insert(t.DB, or, t.name, kvs)
+}
+
+func (t *Table[T]) Modify(id any, f func(*T) error, ks ...string) error {
+	v, err := QueryOne[T](t.DB, `SELECT {cols "cols"} FROM {'table} WHERE {'k} = {$v}`, Args{
+		"k": t.idCol, "v": id, "table": t.name, "cols": append(ks, t.idCol),
+	})
+	if err != nil {
+		return err
+	} else if err := f(&v); err != nil {
+		return err
+	}
+	return t.Update(v, ks...)
 }
 
 func (t *Table[T]) Update(v T, ks ...string) error {
@@ -99,7 +117,10 @@ func (t *Table[T]) Update(v T, ks ...string) error {
 
 func (db *DB) connectHook(c *sqlite3.SQLiteConn) error {
 	for name, f := range db.funcs {
-		_, isPure := f.(PureFunc)
+		v, isPure := f.(PureFunc)
+		if isPure {
+			f = v.F
+		}
 		if err := c.RegisterFunc(name, f, isPure); err != nil {
 			return err
 		}

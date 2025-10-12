@@ -17,7 +17,7 @@ import (
 
 type Args map[string]any
 type JSON struct{ V any }
-type PureFunc any
+type PureFunc struct{ F any }
 
 var MigrateErr = fmt.Errorf("schema needs to be rebuilt")
 
@@ -27,8 +27,8 @@ var templates = template.Must(template.New("").Funcs(template.FuncMap{
 	"panic": func(args ...any) string { panic(args) },
 }).Parse(templatesString))
 var defaultFuncs = map[string]any{
-	"re_extract": PureFunc(regexpExtract),
-	"dt":         PureFunc(timeDT),
+	"re_extract": PureFunc{regexpExtract},
+	"dt":         PureFunc{timeDT},
 }
 var regexpExtractRegexps = map[string]*regexp.Regexp{}
 var sqlNameRe = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
@@ -91,7 +91,9 @@ func RowMap[T any](v T) (string, any, map[string]any) {
 	kvs, idK, idV := make(map[string]any, t.NumField()), "", any(nil)
 	for i := 0; i < t.NumField(); i++ {
 		f, v := t.Field(i), rv.Field(i).Interface()
-		if k := f.Name; k == "ID" || k == "RowID" {
+		if sq := f.Tag.Get("sq"); strings.Contains(sq, " AS (") {
+			continue
+		} else if k := f.Name; k == "ID" || k == "RowID" {
 			idK, idV = k, v
 		} else if jsonDefault(f.Type) != "" {
 			kvs[k] = &JSON{v}
@@ -122,6 +124,12 @@ func Copy(name string, oldDB, newDB *DB) error {
 	oldTables, err := Tables(oldDB, true)
 	if err != nil {
 		return fmt.Errorf("failed to list tables to rebuild: %w", err)
+	}
+	if _, err := oldDB.Exec("PRAGMA journal_mode=delete"); err != nil {
+		return fmt.Errorf("failed to ensure default journal mode: %w", err)
+	}
+	if err := oldDB.Close(); err != nil {
+		return fmt.Errorf("failed to close old db: %w", err)
 	}
 	newTX, err := newDB.Begin()
 	if err != nil {
@@ -188,6 +196,7 @@ func (a Args) Render(tpl string) (string, []any, error) {
 		"quote":  a.quote,
 		"bind":   a.bind,
 		"values": a.values,
+		"cols":   a.cols,
 		"set":    a.set,
 	}).Parse(tpl)
 	if err != nil {
@@ -219,12 +228,29 @@ func (a Args) set(k string) (string, error) {
 	return a.vals(k, "=")
 }
 
-func (a Args) quote(k string) (string, error) {
-	name, _ := a[k].(string)
-	if !sqlNameRe.MatchString(name) {
-		return "", fmt.Errorf(".%s (%q) is not a valid sql identifier", k, name)
+func (a Args) cols(k string) (string, error) {
+	cols := a[k].([]string)
+	slices.Sort(cols)
+	cols = slices.Compact(cols)
+	for i, c := range cols {
+		if c, err := a.ident(c); err != nil {
+			return "", err
+		} else {
+			cols[i] = c
+		}
 	}
-	return "`" + name + "`", nil
+	return strings.Join(cols, ", "), nil
+}
+
+func (a Args) ident(v string) (string, error) {
+	if !sqlNameRe.MatchString(v) {
+		return "", fmt.Errorf("(%q) is not a valid sql identifier", v)
+	}
+	return "`" + v + "`", nil
+}
+
+func (a Args) quote(k string) (string, error) {
+	return a.ident(a[k].(string))
 }
 
 func (a Args) bind(k string) (string, error) {
