@@ -29,7 +29,7 @@ func TestCompile(t *testing.T) {
 				c := NewCompiler(ProcessDirectives)
 				ns := c.ParseList(tpl.Tree.Root)
 				sJSON.KeyedSnap(t, "nodes", ns)
-				sHTML.KeyedSnap(t, "nodes-to-html", snap.HTML(c.RenderHTML(ns)))
+				sHTML.KeyedSnap(t, "nodes-to-html", snap.HTML(c.RenderHTML(ns...)))
 				if err := c.Compile(tpl); err != nil {
 					t.Fatal(err)
 				}
@@ -38,6 +38,10 @@ func TestCompile(t *testing.T) {
 				for _, name := range c.Calls[tpl.Name()] {
 					sHTML.KeyedSnap(t, "compiled:"+name, snap.HTML(tpl.Lookup(name).Tree.Root.String()))
 					sJSON.KeyedSnap(t, "compiled:"+name, c.ParseList(tpl.Lookup(name).Tree.Root))
+					if name := "[assets]" + name; tpl.Lookup(name) != nil {
+						sHTML.KeyedSnap(t, "compiled:"+name, snap.HTML(tpl.Lookup(name).Tree.Root.String()))
+						sJSON.KeyedSnap(t, "compiled:"+name, c.ParseList(tpl.Lookup(name).Tree.Root))
+					}
 				}
 				w := &strings.Builder{}
 				if err := tpl.Execute(w, data); err != nil {

@@ -307,6 +307,8 @@
       ]
     }
   ],
+  "nested/test-nested/compiled:[assets]<x-child>#01": null,
+  "nested/test-nested/compiled:[assets]<x-parent>#01": null,
   "nested/test-nested/nodes": [
     {
       "Type": 1,

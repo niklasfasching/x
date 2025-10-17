@@ -2,4 +2,8 @@
   <div .class1 .class2 .class3 #id --css-var="1em"></div>
   <input type="checkbox" checked?="{{ true }}">
   <div .class="{{ true }}"></div>
+  <div [gap]="3"></div>
+  <div {{ if . }} foo=bar {{ end }}></div>
+  <div .foo:="var-value" background:="blue" />
+  <self-closing-works/><even-with-unquoted-attrs k=v/>
 {{ end }}

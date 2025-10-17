@@ -16,39 +16,24 @@ import (
 type Compiler struct {
 	*Context
 	Calls       map[string][]string
-	processElem func(c *Compiler, n *Node)
+	processElem func(c *Compiler, p *Component, n *Node)
 }
 
-var DefaultFuncs = template.FuncMap{
-	"list": func(vs ...any) any { return vs },
-	"dict": func(kvs ...any) any {
-		m := map[string]any{}
-		for i := 0; i < len(kvs); i += 2 {
-			if k, v := kvs[i].(string), kvs[i+1]; k == "..." && len(kvs) == 2 {
-				return v // TODO: lowerCamel struct field names
-			} else if k == "..." {
-				panic(fmt.Errorf("'...' must not be used with other kvs: got %v", kvs))
-			} else {
-				k := kebabToCamelRe.ReplaceAllStringFunc(k, func(s string) string {
-					return strings.ToUpper(s[1:])
-				})
-				m[k] = v
-			}
-		}
-		return m
-	},
+type Component struct {
+	SlotDot string
+	Slots   map[string]*Node
+	*Node
 }
 
-var kebabToCamelRe = regexp.MustCompile("-(.)")
 var isComponentTplName = regexp.MustCompile(`^<[\w-]+>$`).MatchString
 
-func NewCompiler(f func(c *Compiler, n *Node), delimiters ...string) *Compiler {
-	return &Compiler{New(delimiters...), map[string][]string{}, f}
+func NewCompiler(processElem func(c *Compiler, p *Component, n *Node), delimiters ...string) *Compiler {
+	return &Compiler{New(delimiters...), map[string][]string{}, processElem}
 }
 
 // Compile expands syntax sugar for html in a template and all its subtemplates.
-// - html tag based template calls for for html tags with dashes and corresponding <$name> definitions
-//   i.e. `<tpl-foo a="1" b="{{ true }}" />` becomes `{{ template "<tpl-foo>" {a: "1", b: true} }}`
+// - html tag based template calls for for html tags with corresponding <$name> template definitions
+//   i.e. `<foo a="1" b="{{ true }}" />` becomes `{{ template "<foo>" {a: "1", b: true} }}`
 // Inlining templates technically "leaks" variables of the surrounding scope of the callsite
 // to the component template. However, templates are first parsed and compiled un-inlined
 // by html/template, and references to variables outside the scope of the component template
@@ -65,24 +50,46 @@ func (c *Compiler) Compile(tpl *template.Template) (err error) {
 		if !isComponentTplName(name) {
 			continue
 		}
-		templates, assets := c.partition(c.ParseList(tpl.Tree.Root), "template")
-		if n := len(templates); n != 1 {
-			panic(fmt.Errorf("component must have one <template>: %q (%d)", name, n))
+		m := map[string]*Node{}
+		for _, n := range c.ParseList(tpl.Tree.Root) {
+			if n.Tag == "" {
+				continue
+			} else if m[n.Tag] != nil {
+				panic(fmt.Errorf("duplicate tag %q", n.Tag))
+			} else {
+				m[n.Tag] = n
+			}
 		}
-		if _, err := tpl.Parse(c.RenderHTML(templates[0].Children)); err != nil {
+		nt, nsc, nst := m["template"], m["script"], m["style"]
+		if nt == nil {
+			panic(fmt.Errorf("component %q must have a <template>", name))
+		} else if len(m) > 3 {
+			panic(fmt.Errorf("component %q has too many nodes %v", name, maps.Keys(m)))
+		}
+		if nt.Attr("component") == "true" {
+			nt.Tag = name[1 : len(name)-1]
+			if nsc != nil {
+				nsc.Attrs = append(nsc.Attrs, []html.Attribute{
+					{Key: "type", Val: "module"}, {Key: "defer", Val: "true"}}...,
+				)
+			}
+		} else {
+			nt.Type = FragmentNode
+		}
+		if _, err := tpl.Parse(c.RenderHTML(nt)); err != nil {
 			panic(fmt.Errorf(`failed to parse component %q: %w`, name, err))
 		}
-		if _, err := tpl.New(name + "[assets]").Parse(c.RenderHTML(assets)); err != nil {
-			panic(fmt.Errorf(`failed to parse component %q: %w`, name+"[assets]", err))
+		if _, err := tpl.New("[assets]" + name).Parse(c.RenderHTML(nsc, nst)); err != nil {
+			panic(fmt.Errorf(`failed to parse component %q: %w`, "[assets]"+name, err))
 		}
 	}
 	tpls := tpl.Templates()
 	slices.SortFunc(tpls, func(a, b *template.Template) int { return cmp.Compare(a.Name(), b.Name()) })
 	for _, tpl := range tpls {
 		ns, calls := c.ParseList(tpl.Tree.Root), map[string]int{}
-		c.Walk(tpl, ns, calls, nil, "")
+		c.Walk(tpl, ns, calls, nil)
 		c.Calls[tpl.Name()] = maps.Keys(calls)
-		if _, err := tpl.Parse(c.RenderHTML(ns)); err != nil {
+		if _, err := tpl.Parse(c.RenderHTML(ns...)); err != nil {
 			panic(fmt.Errorf(`failed to parse %q: %w`, tpl.Name(), err))
 		}
 	}
@@ -91,7 +98,7 @@ func (c *Compiler) Compile(tpl *template.Template) (err error) {
 	for name := range c.Calls {
 		fmt.Fprintf(w, "%s if eq . %q %s\n", c.L, name, c.R)
 		for _, name := range c.Calls[name] {
-			fmt.Fprintf(w, "%s template %q . %s\n", c.L, name+"[assets]", c.R)
+			fmt.Fprintf(w, "%s template %q . %s\n", c.L, "[assets]"+name, c.R)
 		}
 		fmt.Fprintf(w, "%s end %s\n", c.L, c.R)
 	}
@@ -101,30 +108,32 @@ func (c *Compiler) Compile(tpl *template.Template) (err error) {
 	return err
 }
 
-func (c *Compiler) Walk(tpl *template.Template, ns []*Node, calls map[string]int, slots map[string]*Node, slotDot string) {
+func (c *Compiler) Walk(tpl *template.Template, ns []*Node, calls map[string]int, p *Component) {
 	for _, n := range ns {
-		if n.Type != html.ElementNode {
+		if n.Type != FragmentNode && n.Type != html.ElementNode {
 			continue
-		} else if strings.Contains(n.Tag, "-") && tpl.Lookup("<"+n.Tag+">") != nil {
-			c.Walk(tpl, n.Children, calls, slots, slotDot)
+		} else if tpl.Lookup("<"+n.Tag+">") != nil && n.Attr("component") != "true" {
+			c.Walk(tpl, n.Children, calls, p)
 			c.inlineComponent(tpl, n, calls)
 		} else if n.Tag == "t:template" {
 			calls[n.Attr("name")]++
 		} else if n.Tag == "t:action" {
-			if pipe := c.Placeholders[n.Attr("pipe")]; pipe == nil {
+			if p == nil {
+				continue
+			} else if pipe := c.Placeholders[n.Attr("pipe")]; pipe == nil {
 				panic(fmt.Errorf("non-placeholder pipe: %q", n.Attr("pipe")))
 			} else if name, ok := strings.CutPrefix(pipe.String(), ".slots."); !ok {
 				continue
-			} else if slot, ok := slots[name]; ok {
-				*n = *c.BranchNode("with", slotDot, slot.Children, nil)
-			} else if slotDot != "" {
+			} else if slot, ok := p.Slots[name]; ok {
+				*n = *c.BranchNode("with", p.SlotDot, slot.Children, nil)
+			} else if p.SlotDot != "" {
 				panic(fmt.Errorf("unknown slot: %q", name))
 			}
 		} else {
 			if !strings.HasPrefix(n.Tag, "t:") {
-				c.processElem(c, n)
+				c.processElem(c, p, n)
 			}
-			c.Walk(tpl, n.Children, calls, slots, slotDot)
+			c.Walk(tpl, n.Children, calls, p)
 		}
 	}
 }
@@ -152,14 +161,15 @@ func (c *Compiler) SetAttrs(n *Node, kvs map[string]string) {
 func (c *Compiler) inlineComponent(tpl *template.Template, n *Node, calls map[string]int) {
 	name := "<" + n.Tag + ">"
 	calls[name], c.id = calls[name]+1, c.id+1
-	slotNodes, rest := c.partition(n.Children, "slot")
-	slots := map[string]*Node{"rest": {Children: rest}}
-	for _, n := range slotNodes {
-		k := n.Attr("name")
-		if _, ok := slots[k]; ok {
+	slots, slotNodes := map[string]*Node{"rest": {}}, []*Node{}
+	for _, n := range n.Children {
+		if n.Tag != "slot" {
+			slots["rest"].Children = append(slots["rest"].Children, n)
+		} else if k := n.Attr("name"); slots[k] != nil {
 			panic(fmt.Errorf("duplicate slot %q in %q", k, "<"+n.Tag+">"))
+		} else {
+			slots[k], slotNodes = n, append(slotNodes, n)
 		}
-		slots[k] = n
 	}
 	w, slotDot := &strings.Builder{}, fmt.Sprintf("$_dot_%d", c.id)
 	w.WriteString(`$ := (dict "slots" (list`)
@@ -176,20 +186,10 @@ func (c *Compiler) inlineComponent(tpl *template.Template, n *Node, calls map[st
 	}
 	w.WriteString(")")
 	componentNodes := c.ParseList(tpl.Lookup(name).Tree.Root)
+	c.Walk(tpl, componentNodes, calls, &Component{slotDot, slots, n})
 	*n = *c.BranchNode("with", slotDot+" := .",
 		[]*Node{c.BranchNode("with", w.String(), componentNodes, nil)}, nil)
-	c.Walk(tpl, componentNodes, calls, slots, slotDot)
-}
 
-func (c *Compiler) partition(ns []*Node, tag string) (xs, rest []*Node) {
-	for _, n := range ns {
-		if n.Tag == tag {
-			xs = append(xs, n)
-		} else {
-			rest = append(rest, n)
-		}
-	}
-	return xs, rest
 }
 
 func (c *Compiler) resolveCalls() {

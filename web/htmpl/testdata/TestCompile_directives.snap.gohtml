@@ -2,16 +2,31 @@
   <div .class1 .class2 .class3 #id --css-var=1em></div>
   <input type=checkbox checked?="{{ true }}">
   <div .class="{{ true }}"></div>
+  <div [gap]=3></div>
+  <div {{if .}} foo=bar {{end}}></div>
+  <div .foo:=var-value background:=blue></div>
+  <self-closing-works></self-closing-works>
+  <even-with-unquoted-attrs k=v></even-with-unquoted-attrs>
 </noscript>
 
 <noscript name="directives/test-directives/compiled">
   <div class=" class1 class2 class3" id=id style="; --css-var: 1em;"></div>
   <input type=checkbox {{if true}}checked{{end}}>
   <div class=" {{if true}}class{{end}}"></div>
+  <div data-gap=3></div>
+  <div {{if .}} foo=bar {{end}}></div>
+  <div class=" foo" style="; --foo: var-value;; background: blue;"></div>
+  <self-closing-works></self-closing-works>
+  <even-with-unquoted-attrs k=v></even-with-unquoted-attrs>
 </noscript>
 
 <noscript name="directives/test-directives/executed">
   <div class=" class1 class2 class3" id=id style="; --css-var: 1em;"></div>
   <input type=checkbox checked>
   <div class=" class"></div>
+  <div data-gap=3></div>
+  <div  foo=bar ></div>
+  <div class=" foo" style="; --foo: var-value;; background: blue;"></div>
+  <self-closing-works></self-closing-works>
+  <even-with-unquoted-attrs k=v></even-with-unquoted-attrs>
 </noscript>

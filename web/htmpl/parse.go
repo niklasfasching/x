@@ -52,7 +52,7 @@ func New(delimiters ...string) *Context {
 	return &Context{Placeholders: map[string]parse.Node{}, L: l, R: r}
 }
 
-func (c *Context) RenderHTML(ns []*Node) string {
+func (c *Context) RenderHTML(ns ...*Node) string {
 	w, kvs := &strings.Builder{}, []string{}
 	c.renderHTML(w, ns, 0, false)
 	for k, v := range c.Placeholders {
@@ -103,7 +103,7 @@ func (c *Context) ParseHTML(z *html.Tokenizer, isRaw bool) (ns []*Node) {
 				// not a start tag with k="v/" - even if the spec says differntly. TIL.
 				if !more && len(v) > 0 && v[len(v)-1] == '/' {
 					if raw := string(z.Raw()); raw[len(raw)-2] == '/' {
-						v, t = v[:len(v)-1], html.SelfClosingTagToken
+						v, n.SelfClosing = v[:len(v)-1], true
 					}
 				}
 				n.Attrs = append(n.Attrs, html.Attribute{Key: string(k), Val: string(v)})
@@ -191,7 +191,8 @@ func (c *Context) ExpandString(s string) string {
 }
 
 func (c *Context) FmtPlaceholder(tpl string, args ...any) string {
-	return c.Placeholder(&parse.TextNode{Text: []byte(fmt.Sprintf(tpl, args...))})
+	tpl = strings.NewReplacer("{{", c.L, "}}", c.R).Replace(tpl)
+	return c.Placeholder(&parse.TextNode{Text: fmt.Appendf(nil, tpl, args...)})
 }
 
 func (c *Context) Placeholder(n parse.Node) string {
@@ -199,6 +200,12 @@ func (c *Context) Placeholder(n parse.Node) string {
 	k := fmt.Sprintf("{{%d}}", c.id)
 	c.Placeholders[k] = n
 	return k
+}
+
+func (c *Context) ActionNode(pipe string) *Node {
+	return &Node{Tag: "t:action", Type: html.ElementNode, Attrs: []html.Attribute{
+		{Key: "pipe", Val: pipe},
+	}}
 }
 
 func (c *Context) BranchNode(kind, pipe string, ns, elseNS []*Node) *Node {
@@ -221,7 +228,7 @@ func (c *Context) BranchNode(kind, pipe string, ns, elseNS []*Node) *Node {
 func (c *Context) renderHTML(w *strings.Builder, ns []*Node, lvl int, isRaw bool) bool {
 	indent, isEmpty := strings.Repeat("  ", lvl), true
 	for _, n := range ns {
-		isWhitespace := n.Type == html.TextNode && strings.TrimSpace(n.Text) == ""
+		isWhitespace := n == nil || n.Type == html.TextNode && strings.TrimSpace(n.Text) == ""
 		if isWhitespace {
 			continue
 		}

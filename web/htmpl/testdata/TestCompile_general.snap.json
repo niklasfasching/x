@@ -24,7 +24,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{67}}"
+          "Val": "{{73}}"
         }
       ],
       "SelfClosing": true,
@@ -49,7 +49,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{68}}"
+          "Val": "{{74}}"
         }
       ],
       "SelfClosing": true,
@@ -74,7 +74,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{69}}"
+          "Val": "{{75}}"
         }
       ],
       "SelfClosing": true,
@@ -102,7 +102,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{70}}"
+          "Val": "{{76}}"
         }
       ],
       "SelfClosing": true,
@@ -127,7 +127,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{71}}"
+          "Val": "{{77}}"
         }
       ],
       "SelfClosing": true,
@@ -151,7 +151,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{72}}"
+          "Val": "{{78}}"
         },
         {
           "Namespace": "",
@@ -200,7 +200,7 @@
                 {
                   "Namespace": "",
                   "Key": "pipe",
-                  "Val": "{{76}}"
+                  "Val": "{{82}}"
                 }
               ],
               "SelfClosing": true,
@@ -225,7 +225,7 @@
                 {
                   "Namespace": "",
                   "Key": "pipe",
-                  "Val": "{{77}}"
+                  "Val": "{{83}}"
                 }
               ],
               "SelfClosing": true,
@@ -242,6 +242,117 @@
               "Children": null
             }
           ]
+        }
+      ]
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "div",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "...{{72}}",
+          "Val": ""
+        }
+      ],
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	  the attributes set on the component can also be statically forwarded using
+	  ",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        },
+        {
+          "Type": 3,
+          "Tag": "code",
+          "Text": "",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": [
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	    ...
+	  ",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            }
+          ]
+        },
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        }
+      ]
+    }
+  ],
+  "general/test-x-component/compiled:[assets]<x-component>#01": [
+    {
+      "Type": 3,
+      "Tag": "script",
+      "Text": "",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	  some script
+	",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        }
+      ]
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "style",
+      "Text": "",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	  some style
+	",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
         }
       ]
     }

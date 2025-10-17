@@ -1,0 +1,176 @@
+{
+  "web-component/test-x-component/calls": {
+    "test-x-component": [
+      "<x-component>"
+    ]
+  },
+  "web-component/test-x-component/compiled:<x-component>#01": [
+    {
+      "Type": 3,
+      "Tag": "x-component",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "component",
+          "Val": "true"
+        },
+        {
+          "Namespace": "",
+          "Key": "...{{12}}",
+          "Val": ""
+        },
+        {
+          "Namespace": "",
+          "Key": "class",
+          "Val": " class"
+        },
+        {
+          "Namespace": "",
+          "Key": "id",
+          "Val": "id"
+        }
+      ],
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	  with component=true the component tag stays wrapped after inlining.
+	    Directives applied to the template get applied to the wrapper.
+	    The `...` directive allows forwarding all non-minus-prefixed (~non-flag) parameters.
+	    Differentiating which parameters get forwarded allows us e.g. ignore lists and dicts
+	    that are passed for {range} rather than to be used as attributes.
+	  ",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        },
+        {
+          "Type": 3,
+          "Tag": "div",
+          "Text": "",
+          "Attrs": [
+            {
+              "Namespace": "",
+              "Key": "...{{13}}",
+              "Val": ""
+            }
+          ],
+          "SelfClosing": false,
+          "Children": null
+        },
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        }
+      ]
+    }
+  ],
+  "web-component/test-x-component/compiled:[assets]<x-component>#01": [
+    {
+      "Type": 3,
+      "Tag": "script",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "type",
+          "Val": "module"
+        },
+        {
+          "Namespace": "",
+          "Key": "defer",
+          "Val": "true"
+        }
+      ],
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	  customElements.define(\"x-component\", class extends HTMLElement {
+	    connectedCallback() {
+	     // ...
+	    }
+	  })
+	",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        }
+      ]
+    }
+  ],
+  "web-component/test-x-component/nodes": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "x-component",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "foo",
+          "Val": "foo-value"
+        },
+        {
+          "Namespace": "",
+          "Key": "-bar",
+          "Val": "bar-value"
+        },
+        {
+          "Namespace": "",
+          "Key": "baz",
+          "Val": "baz-value"
+        },
+        {
+          "Namespace": "",
+          "Key": "-bam",
+          "Val": "bam-value"
+        },
+        {
+          "Namespace": "",
+          "Key": "a",
+          "Val": "with parent dot {{1}}"
+        }
+      ],
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	  ",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        }
+      ]
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    }
+  ]
+}

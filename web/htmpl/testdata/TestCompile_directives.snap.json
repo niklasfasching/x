@@ -99,6 +99,111 @@
       "Type": 1,
       "Tag": "",
       "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "div",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "[gap]",
+          "Val": "3"
+        }
+      ],
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "div",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "{{3}}",
+          "Val": ""
+        }
+      ],
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "div",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": ".foo:",
+          "Val": "var-value"
+        },
+        {
+          "Namespace": "",
+          "Key": "background:",
+          "Val": "blue"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "self-closing-works",
+      "Text": "",
+      "Attrs": null,
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "even-with-unquoted-attrs",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "k",
+          "Val": "v"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
 	",
       "Attrs": null,
       "SelfClosing": false,

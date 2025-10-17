@@ -20,7 +20,7 @@
 </noscript>
 
 <noscript name="general/test-x-component/compiled">
-  {{with $_dot_43 := .}}
+  {{with $_dot_45 := .}}
     {{with $ := (dict "slots" (list (dict "name" "a" "other-field" "value-of-other-field")) "static" "static-value" "mixed" (print "foo-" .a "-bar") "dynamic" .a)}}
       Each component must have a template; the html inside is what is inlined and rendered at each callsite.
       The attributes passed to the component are available as fields on dot, e.g.
@@ -37,7 +37,7 @@
       In addition, slots from the call site are available as both variables and elements:
       - Both named slots:
       slots.a:
-      {{with $_dot_43}}
+      {{with $_dot_45}}
         content of
         <b>
           slot a
@@ -48,7 +48,7 @@
       {{end}}
       - And the rest:
       slots.rest:
-      {{with $_dot_43}}
+      {{with $_dot_45}}
         <div>
           remaining content of
         </div>
@@ -66,6 +66,12 @@
         {{.otherField}}
         == value-of-other-field
       {{end}}
+      <div dynamic="{{with $_dot_45}} {{.a}} {{end}}" mixed="{{with $_dot_45}} {{(print "foo-" .a "-bar")}} {{end}}" static=static-value>
+        the attributes set on the component can also be statically forwarded using
+        <code>
+          ...
+        </code>
+      </div>
     {{end}}
   {{end}}
 </noscript>
@@ -99,6 +105,21 @@
     {{.otherField}}
     == value-of-other-field
   {{end}}
+  <div ...{{.}}>
+    the attributes set on the component can also be statically forwarded using
+    <code>
+      ...
+    </code>
+  </div>
+</noscript>
+
+<noscript name="general/test-x-component/compiled:[assets]<x-component>">
+  <script>
+    some script
+  </script>
+  <style>
+    some style
+  </style>
 </noscript>
 
 <noscript name="general/test-x-component/executed">
@@ -148,6 +169,12 @@
         value-of-other-field
         == value-of-other-field
       
+      <div dynamic=" value-of-a " mixed=" foo-value-of-a-bar " static=static-value>
+        the attributes set on the component can also be statically forwarded using
+        <code>
+          ...
+        </code>
+      </div>
     
   
 </noscript>
