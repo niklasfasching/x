@@ -78,18 +78,7 @@
       "Type": 3,
       "Tag": "script",
       "Text": "",
-      "Attrs": [
-        {
-          "Namespace": "",
-          "Key": "type",
-          "Val": "module"
-        },
-        {
-          "Namespace": "",
-          "Key": "defer",
-          "Val": "true"
-        }
-      ],
+      "Attrs": null,
       "SelfClosing": false,
       "Children": [
         {

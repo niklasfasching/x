@@ -15,12 +15,11 @@ func TestCompile(t *testing.T) {
 	snap.Cases(t, "*.case.gohtml", func(t *testing.T, name string, bs []byte) {
 		sHTML := snap.NewNamed(t, ".gohtml")
 		sJSON := snap.NewNamed(t, ".json")
-		tpl, err := template.New(name).Parse(string(bs))
+		tpl, err := template.New(name).Funcs(DefaultFuncs).Parse(string(bs))
 		if err != nil {
 			sHTML.KeyedSnap(t, "compiled", "err: "+err.Error())
 			return
 		}
-		tpl.Funcs(DefaultFuncs)
 		for _, tpl := range tpl.Templates() {
 			if !strings.HasPrefix(tpl.Name(), "test-") {
 				continue

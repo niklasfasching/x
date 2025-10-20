@@ -355,6 +355,15 @@
           "Children": null
         }
       ]
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	something else",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
     }
   ],
   "general/test-x-component/nodes": [

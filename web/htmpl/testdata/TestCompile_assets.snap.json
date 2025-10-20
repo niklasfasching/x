@@ -1,0 +1,500 @@
+{
+  "assets/test-assets/calls": {
+    "<component>": [
+      "[css-reset]",
+      "[css-utilities]"
+    ],
+    "[css-utilities]": [
+      "[css-reset]"
+    ],
+    "test-assets": [
+      "[assets]",
+      "[css-reset]",
+      "[css-utilities]",
+      "<component>"
+    ]
+  },
+  "assets/test-assets/compiled:<component>#01": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "the component",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    }
+  ],
+  "assets/test-assets/compiled:[assets]#01": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:branch",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{19}}"
+        },
+        {
+          "Namespace": "",
+          "Key": "keyword",
+          "Val": "if"
+        }
+      ],
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 3,
+          "Tag": "t:list",
+          "Text": "",
+          "Attrs": [
+            {
+              "Namespace": "",
+              "Key": "kind",
+              "Val": "then"
+            }
+          ],
+          "SelfClosing": false,
+          "Children": [
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 3,
+              "Tag": "t:template",
+              "Text": "",
+              "Attrs": [
+                {
+                  "Namespace": "",
+                  "Key": "name",
+                  "Val": "[css-reset]"
+                },
+                {
+                  "Namespace": "",
+                  "Key": "pipe",
+                  "Val": "{{23}}"
+                }
+              ],
+              "SelfClosing": true,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 3,
+              "Tag": "t:template",
+              "Text": "",
+              "Attrs": [
+                {
+                  "Namespace": "",
+                  "Key": "name",
+                  "Val": "[css-utilities]"
+                },
+                {
+                  "Namespace": "",
+                  "Key": "pipe",
+                  "Val": "{{24}}"
+                }
+              ],
+              "SelfClosing": true,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:branch",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{25}}"
+        },
+        {
+          "Namespace": "",
+          "Key": "keyword",
+          "Val": "if"
+        }
+      ],
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 3,
+          "Tag": "t:list",
+          "Text": "",
+          "Attrs": [
+            {
+              "Namespace": "",
+              "Key": "kind",
+              "Val": "then"
+            }
+          ],
+          "SelfClosing": false,
+          "Children": [
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 3,
+              "Tag": "t:template",
+              "Text": "",
+              "Attrs": [
+                {
+                  "Namespace": "",
+                  "Key": "name",
+                  "Val": "[css-reset]"
+                },
+                {
+                  "Namespace": "",
+                  "Key": "pipe",
+                  "Val": "{{28}}"
+                }
+              ],
+              "SelfClosing": true,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:branch",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{29}}"
+        },
+        {
+          "Namespace": "",
+          "Key": "keyword",
+          "Val": "if"
+        }
+      ],
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 3,
+          "Tag": "t:list",
+          "Text": "",
+          "Attrs": [
+            {
+              "Namespace": "",
+              "Key": "kind",
+              "Val": "then"
+            }
+          ],
+          "SelfClosing": false,
+          "Children": [
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 3,
+              "Tag": "t:template",
+              "Text": "",
+              "Attrs": [
+                {
+                  "Namespace": "",
+                  "Key": "name",
+                  "Val": "[css-reset]"
+                },
+                {
+                  "Namespace": "",
+                  "Key": "pipe",
+                  "Val": "{{34}}"
+                }
+              ],
+              "SelfClosing": true,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 3,
+              "Tag": "t:template",
+              "Text": "",
+              "Attrs": [
+                {
+                  "Namespace": "",
+                  "Key": "name",
+                  "Val": "[css-utilities]"
+                },
+                {
+                  "Namespace": "",
+                  "Key": "pipe",
+                  "Val": "{{35}}"
+                }
+              ],
+              "SelfClosing": true,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 3,
+              "Tag": "t:template",
+              "Text": "",
+              "Attrs": [
+                {
+                  "Namespace": "",
+                  "Key": "name",
+                  "Val": "[assets]<component>"
+                },
+                {
+                  "Namespace": "",
+                  "Key": "pipe",
+                  "Val": "{{36}}"
+                }
+              ],
+              "SelfClosing": true,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": "
+	",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "assets/test-assets/compiled:[assets]<component>#01": [
+    {
+      "Type": 3,
+      "Tag": "style",
+      "Text": "",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	  component css
+	",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        }
+      ]
+    }
+  ],
+  "assets/test-assets/compiled:[css-reset]#01": [
+    {
+      "Type": 3,
+      "Tag": "style",
+      "Text": "",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	  reset {}
+	",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        }
+      ]
+    }
+  ],
+  "assets/test-assets/compiled:[css-utilities]#01": [
+    {
+      "Type": 3,
+      "Tag": "style",
+      "Text": "",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": [
+        {
+          "Type": 1,
+          "Tag": "",
+          "Text": "
+	  utilities {}
+	",
+          "Attrs": null,
+          "SelfClosing": false,
+          "Children": null
+        }
+      ]
+    }
+  ],
+  "assets/test-assets/nodes": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:template",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "name",
+          "Val": "[assets]"
+        },
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{2}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "component",
+      "Text": "",
+      "Attrs": null,
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  assets are rendered depth first and deduplicated, i.e. even though both
+	  [css-utilities] and [component] require  [css-reset], it is only included
+	  once and rendered before [css-utilities]
+	
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    }
+  ]
+}

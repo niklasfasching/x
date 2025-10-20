@@ -13,12 +13,12 @@ var attrKeyDirectiveRe = regexp.MustCompile(`^([\[#.-]+)?(.*?)([:?\]]+)?$`)
 var attrValStyleVarRe = regexp.MustCompile(`(--\w+)`)
 var kebabToCamelRe = regexp.MustCompile("-(.)")
 
-func ProcessDirectives(c *Compiler, p *Component, n *Node) {
+func ProcessDirectives(c *Compiler, p *Frame, n *Node) {
 	kvs := map[string]string{}
 	for _, a := range n.Attrs {
 		m := attrKeyDirectiveRe.FindStringSubmatch(a.Key)
 		switch pre, k, suf, v := m[1], m[2], m[3], a.Val; {
-		case pre == "..." && c.ExpandString(k) == "." && v == "" && p != nil:
+		case pre == "..." && c.ExpandString(k) == "." && v == "" && p.SlotDot != "":
 			for _, a := range p.Attrs { // forward all non-flag component attrs
 				if isFlag := strings.HasPrefix(a.Key, "-"); isFlag {
 					continue

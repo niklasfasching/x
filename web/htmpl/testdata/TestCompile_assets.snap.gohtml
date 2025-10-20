@@ -1,0 +1,76 @@
+<noscript name="assets/test-assets/nodes-to-html">
+  {{ template "[assets]" "test-assets" }}
+  <component></component>
+  assets are rendered depth first and deduplicated, i.e. even though both
+    [css-utilities] and [component] require  [css-reset], it is only included
+    once and rendered before [css-utilities]
+</noscript>
+
+<noscript name="assets/test-assets/compiled">
+  {{template "[assets]" "test-assets"}}
+  {{with $_dot_15 := .}}
+    {{with $ := (dict "slots" (list))}}
+      the component
+    {{end}}
+  {{end}}
+  assets are rendered depth first and deduplicated, i.e. even though both
+    [css-utilities] and [component] require  [css-reset], it is only included
+    once and rendered before [css-utilities]
+</noscript>
+
+<noscript name="assets/test-assets/compiled:[assets]">
+  {{if eq . "<component>"}}
+  {{template "[css-reset]" .}}
+  {{template "[css-utilities]" .}}
+  {{end}}{{if eq . "[css-utilities]"}}
+  {{template "[css-reset]" .}}
+  {{end}}{{if eq . "test-assets"}}
+  {{template "[css-reset]" .}}
+  {{template "[css-utilities]" .}}
+  {{template "[assets]<component>" .}}
+  {{end}}
+</noscript>
+
+<noscript name="assets/test-assets/compiled:[css-reset]">
+  <style>
+    reset {}
+  </style>
+</noscript>
+
+<noscript name="assets/test-assets/compiled:[css-utilities]">
+  <style>
+    utilities {}
+  </style>
+</noscript>
+
+<noscript name="assets/test-assets/compiled:<component>">
+  the component
+</noscript>
+
+<noscript name="assets/test-assets/compiled:[assets]<component>">
+  <style>
+    component css
+  </style>
+</noscript>
+
+<noscript name="assets/test-assets/executed">
+  
+  <style>
+    reset {}
+  </style>
+  <style>
+    utilities {}
+  </style>
+  <style>
+    component css
+  </style>
+  
+  
+    
+      the component
+    
+  
+  assets are rendered depth first and deduplicated, i.e. even though both
+    [css-utilities] and [component] require  [css-reset], it is only included
+    once and rendered before [css-utilities]
+</noscript>

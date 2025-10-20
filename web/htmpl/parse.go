@@ -127,8 +127,11 @@ func (c *Context) ExpandText(n parse.Node) ([]*Node, bool) {
 		fmt.Fprintf(bs, "<t:action pipe=%s />", c.Placeholder(n.Pipe))
 		return c.ParseHTML(html.NewTokenizer(bs), false), true
 	case *parse.TemplateNode:
-		bs, name := &bytes.Buffer{}, html.EscapeString(n.Name)
-		fmt.Fprintf(bs, "<t:template name=%q pipe=%s />", name, c.Placeholder(n.Pipe))
+		bs, name, p := &bytes.Buffer{}, html.EscapeString(n.Name), ""
+		if n.Pipe != nil {
+			p = c.Placeholder(n.Pipe)
+		}
+		fmt.Fprintf(bs, "<t:template name=%q pipe=%s />", name, p)
 		return c.ParseHTML(html.NewTokenizer(bs), false), true
 	case *parse.IfNode:
 		return c.ExpandText(&n.BranchNode)
