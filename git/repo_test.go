@@ -1,6 +1,7 @@
 package git
 
 import (
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,13 +39,13 @@ func TestGit(t *testing.T) {
 	// Unchanged should not be added
 	if changed := c.Add("README.md", []byte("hello world")); changed {
 		t.Fatalf("Unexpectedly treated as changed")
-	} else if _, isEmpty := c.PackData(); !isEmpty {
+	} else if _, isEmpty := c.PackData("/"); !isEmpty {
 		t.Fatalf("Unexpectedly reported not empty")
 	}
 	// Changed files should be added and pushed correctly
 	if changed := c.Add("NOTES.md", []byte("hello world!!!")); !changed {
 		t.Fatalf("Unexpectedly treated as unchanged")
-	} else if packData, isEmpty := c.PackData(); isEmpty {
+	} else if packData, isEmpty := c.PackData("/"); isEmpty {
 		t.Fatalf("Unexpectedly reported empty")
 	} else if err := r.Push("main", c, packData); err != nil {
 		t.Fatalf("Failed to push: %v", err)
@@ -52,6 +53,31 @@ func TestGit(t *testing.T) {
 	assertRepo(t, workDir, map[string]string{
 		"README.md": "hello world",
 		"NOTES.md":  "hello world!!!",
+	})
+}
+
+func TestPushDir(t *testing.T) {
+	workDirSub, gitDirSub := initRepo(t, map[string]string{
+		"README.md":     "in /",
+		"foo/README.md": "in /foo",
+	})
+	rSub := &Remote{Client: &Shell{gitDirSub}, Repo: gitDirSub}
+	cSub, err := rSub.NewCommit("main")
+	if err != nil {
+		t.Fatalf("NewCommit failed: %v", err)
+	}
+	cSub.Add("bar/README.md", []byte("in /bar"))
+	packDataBarOnly, isEmpty := cSub.PackData("bar")
+	if isEmpty {
+		t.Fatalf("PackData('bar') unexpectedly empty")
+	} else if err := rSub.Push("main", cSub, packDataBarOnly); err != nil {
+		t.Fatalf("Push failed: %v", err)
+	}
+	assertRepo(t, workDirSub, map[string]string{
+		// everythting outside bar/ is preserved from the parent commit
+		"README.md":     "in /",
+		"foo/README.md": "in /foo",
+		"bar/README.md": "in /bar",
 	})
 }
 
@@ -67,7 +93,9 @@ func initRepo(t *testing.T, files map[string]string) (string, string) {
 		}
 	})
 	for name, content := range files {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0755); err != nil {
+			t.Fatalf("Failed to create dir for %s: %v", name, err)
+		} else if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
 			t.Fatalf("Failed to create %s: %v", name, err)
 		}
 	}
@@ -77,22 +105,27 @@ func initRepo(t *testing.T, files map[string]string) (string, string) {
 
 func assertRepo(t *testing.T, dir string, files map[string]string) {
 	run(t, dir, `git reset --hard`)
-	fs, err := os.ReadDir(dir)
+	err := filepath.Walk(dir, func(path string, f fs.FileInfo, err error) error {
+		if f.Name() == ".git" && f.IsDir() {
+			return filepath.SkipDir
+		} else if f.IsDir() {
+			return nil
+		}
+		relPath, _ := filepath.Rel(dir, path)
+		if expected, ok := files[relPath]; !ok {
+			t.Fatalf("Unexpected file: %q", relPath)
+		} else {
+			if bs, err := os.ReadFile(path); err != nil {
+				t.Fatalf("Failed to read %q: %v", f.Name(), err)
+			} else if string(bs) != expected {
+				t.Fatalf("Mismatched %q: %q != %q", f.Name(), string(bs), expected)
+			}
+			delete(files, relPath)
+		}
+		return nil
+	})
 	if err != nil {
-		t.Fatalf("Failed to read git dir: %v", err)
-	}
-	for _, f := range fs {
-		if f.Name() == ".git" {
-			continue
-		}
-		expected := files[f.Name()]
-		bs, err := os.ReadFile(filepath.Join(dir, f.Name()))
-		if err != nil {
-			t.Fatalf("Failed to read %q: %v", f.Name(), err)
-		} else if string(bs) != expected {
-			t.Fatalf("Mismatched %q: %q != %q", f.Name(), string(bs), expected)
-		}
-		delete(files, f.Name())
+		t.Fatal(err)
 	}
 	if len(files) != 0 {
 		t.Fatalf("Missing: %v", files)

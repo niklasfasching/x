@@ -15,13 +15,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"maps"
+
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/exp/maps"
 )
 
 type Remote struct {
@@ -94,7 +95,7 @@ func PushGitHub(path, ref string, key []byte, f func(*Commit) error, kvs ...stri
 	} else if err := f(c); err != nil {
 		return err
 	}
-	packData, isEmpty := c.PackData()
+	packData, isEmpty := c.PackData("/")
 	if isEmpty {
 		log.Println("git push: already up to date")
 		return nil
@@ -145,8 +146,25 @@ func (c *Commit) Add(path string, content []byte) (changed bool) {
 	return changed
 }
 
-func (c *Commit) PackData() ([]byte, bool) {
-	treeHash := c.buildTree(c.FS)
+func (c *Commit) PackData(dir string) ([]byte, bool) {
+	fs := c.FS
+	if dir = strings.Trim(dir, "/"); dir != "" {
+		fs = cloneFS(c.Parent.FS)
+		current, dirFS, parts := fs, c.FS, strings.Split(dir, "/")
+		for i, lvl := range parts {
+			if i == len(parts)-1 {
+				current[lvl] = dirFS[lvl]
+			} else if lvlFS, ok := current[lvl].(map[string]any); ok {
+				dirFS, _ = dirFS[lvl].(map[string]any)
+				current = lvlFS
+			} else {
+				dirFS, _ = dirFS[lvl].(map[string]any)
+				current[lvl] = map[string]any{}
+				current = current[lvl].(map[string]any)
+			}
+		}
+	}
+	treeHash := c.buildTree(fs)
 	c.Meta["tree"] = treeHash
 	parentLine, isEmpty := "", treeHash == c.Parent.Meta["tree"]
 	if c.Parent.Hash != emptyHash {
@@ -184,9 +202,8 @@ func (c *Commit) PackData() ([]byte, bool) {
 }
 
 func (c *Commit) buildTree(fs map[string]any) string {
-	tree, names := []byte{}, maps.Keys(fs)
-	sort.Strings(names)
-	for _, name := range names {
+	tree := []byte{}
+	for _, name := range slices.Sorted(maps.Keys(fs)) {
 		v, entry := fs[name], []byte{}
 		if dir, ok := v.(map[string]any); ok {
 			subTreeHash := c.buildTree(dir)
@@ -229,12 +246,12 @@ func (r *Remote) Push(ref string, c *Commit, packData []byte) error {
 }
 
 func (r *Remote) ListRemote() (map[string]string, error) {
-	stdin, stdout, err := r.Exec("git-receive-pack " + r.Repo)
+	stdin, stdout, err := r.Exec("git-upload-pack " + r.Repo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
+	defer stdin.Close()
 	defer stdout.Close()
-	stdin.Close()
 	refs := make(map[string]string)
 	for {
 		line, err := r.readPktLine(stdout)
@@ -252,6 +269,7 @@ func (r *Remote) ListRemote() (map[string]string, error) {
 			refs[string(parts[1])] = string(parts[0])
 		}
 	}
+	fmt.Fprintf(stdin, "0000")
 	return refs, nil
 }
 
@@ -335,26 +353,48 @@ func (r *Remote) Fetch(hashOrRef string) (*Commit, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse commit: %w", err)
 	}
-	c.expandTreeBlobs(c.Objects[c.Meta["tree"]])
+	c.FS = c.expandTreeBlobs(c.Objects[c.Meta["tree"]])
 	return c, nil
 }
 
-func (c *Commit) expandTreeBlobs(bs []byte) {
+func (c *Commit) expandTreeBlobs(bs []byte) map[string]any {
+	fs := map[string]any{}
 	// expand blobs in subdirectories to allow detecting existing unchanged blobs in Add
 	for len(bs) > 0 {
 		// https://git-scm.com/book/en/v2/Git-Internals-Git-Objects
 		// <mode> <name>\x00<20-byte_hash>
 		mode, rest, _ := bytes.Cut(bs, []byte{' '})
-		_, rest, _ = bytes.Cut(rest, []byte{'\x00'})
+		name, rest, _ := bytes.Cut(rest, []byte{'\x00'})
 		if len(rest) < 20 {
 			break
 		} else if hash := hex.EncodeToString(rest[:20]); string(mode) == "40000" {
-			c.expandTreeBlobs(c.Objects[hash])
+			fs[string(name)] = c.expandTreeBlobs(c.Objects[hash])
 		} else {
 			c.Objects[hash] = nil
+			fs[string(name)] = hash
 		}
 		bs = rest[20:]
 	}
+	return fs
+}
+
+func (c *Commit) parseTree(treeHash string) map[string]any {
+	fs := map[string]any{}
+	for bs := c.Objects[treeHash]; len(bs) > 0; {
+		mode, rest, _ := bytes.Cut(bs, []byte{' '})
+		name, rest, _ := bytes.Cut(rest, []byte{'\x00'})
+		if len(rest) < 20 {
+			break
+		}
+		hash := hex.EncodeToString(rest[:20])
+		if string(mode) == "40000" {
+			fs[string(name)] = c.parseTree(hash)
+		} else {
+			fs[string(name)] = hash
+		}
+		bs = rest[20:]
+	}
+	return fs
 }
 
 func (r *Remote) parsePack(data []byte) (map[string][]byte, error) {
@@ -510,4 +550,14 @@ func hashObject(objType string, content []byte) (string, []byte) {
 	object := append([]byte(fmt.Sprintf("%s %d\x00", objType, len(content))), content...)
 	hash := sha1.Sum(object)
 	return hex.EncodeToString(hash[:]), object
+}
+
+func cloneFS(fs map[string]any) map[string]any {
+	fs = maps.Clone(fs)
+	for k, v := range fs {
+		if subFS, ok := v.(map[string]any); ok {
+			fs[k] = cloneFS(subFS)
+		}
+	}
+	return fs
 }
