@@ -21,11 +21,12 @@ import (
 type S struct {
 	*testing.T
 	Expected map[string]string
-	Actual   [][3]string
+	Actual   []X
 	Path     string
 }
 
 type T struct{ Type, V string }
+type X struct{ K, V, Kind string }
 type HTML string
 
 var updateSnaps = flag.Bool("snap", false, "update testdata/*.snap")
@@ -57,10 +58,17 @@ func New(t *testing.T, exts ...string) *S {
 
 func NewNamed(t *testing.T, name string) *S {
 	t.Helper()
-	if doUpdate() && len(snappers) == 0 {
-		clearSnaps()
+	if DoUpdate() && len(snappers) == 0 {
+		if err := ClearSnaps(); err != nil {
+			t.Fatal(err)
+		}
 	}
-	s := Read(t, name)
+	path := snapPath(t, name)
+	expected, err := Read(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := &S{T: t, Path: path, Expected: expected}
 	t.Cleanup(func() { s.Write() })
 	return s
 }
@@ -94,31 +102,66 @@ func Must[T any](v T, err error) T {
 	return v
 }
 
-func Read(t *testing.T, nameAndOrExt string) *S {
-	path := snapPath(t, nameAndOrExt)
-	if err := os.MkdirAll("testdata", 0755); err != nil {
-		t.Fatalf("failed to create testdata dir: %v", err)
+func (s *S) KeyedSnap(t *testing.T, k string, v any) {
+	t.Run(k, func(t *testing.T) { s.Snap(t, v) })
+}
+
+func (s *S) Snap(t *testing.T, v any) {
+	// we pass t instead of using s.T to handle nested t.Run correctly
+	t.Helper()
+	x := s.Marshal(t, v)
+	if expected := s.Expected[x.K]; !DoUpdate() && x.V != expected {
+		d, _ := Diff(expected, x.V, "\n").Render(true)
+		t.Log("\n" + d)
+		t.Cleanup(func() { t.Fatalf("Failed: %q", t.Name()) })
+	}
+}
+
+func (s *S) Write() {
+	s.Helper()
+	if len(s.Actual) != len(s.Expected) && !DoUpdate() {
+		s.Fatalf("Expected %d but saw %d snaps", len(s.Expected), len(s.Actual))
+	} else if s.Failed() || len(s.Actual) == 0 || !DoUpdate() {
+		return
+	} else if err := Write(s.Path, s.Actual); err != nil {
+		s.T.Fatal(err)
+	}
+}
+
+func (s *S) Marshal(t *testing.T, v any) X {
+	s.Helper()
+	x, err := Marshal(t.Name(), s.Actual, v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Actual = append(s.Actual, x)
+	return x
+}
+
+func Read(path string) (map[string]string, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return nil, fmt.Errorf("failed to create snap dir %q: %w", filepath.Dir(path), err)
 	}
 	bs, err := os.ReadFile(path)
 	if err != nil && !os.IsNotExist(err) {
-		t.Fatalf("failed to read snap: %v", err)
+		return nil, fmt.Errorf("failed to read snap: %w", err)
 	}
 	switch filepath.Ext(path) {
 	case ".json":
 		mRaw, m := map[string]json.RawMessage{}, map[string]string{}
 		bs := []byte(cmp.Or(jsonSpaceUnreplacer.Replace(string(bs)), "{}"))
 		if err := json.Unmarshal(bs, &mRaw); err != nil {
-			t.Fatalf("failed to unmarshal json snap: %v", err)
+			return nil, fmt.Errorf("failed to unmarshal json snap: %w", err)
 		}
 		for k, v := range mRaw {
 			unindented := strings.Join(strings.Split(string(v), "\n  "), "\n")
 			m[k] = jsonSpaceReplacer.Replace(unindented)
 		}
-		return &S{T: t, Expected: m, Path: path}
+		return m, nil
 	}
 	d, err := html.Parse(bytes.NewReader(bs))
 	if err != nil {
-		t.Fatalf("failed to parse snap: %v", err)
+		return nil, fmt.Errorf("failed to parse snap: %w", err)
 	}
 	m, i := map[string]string{}, 0
 	for n := range d.Descendants() {
@@ -137,107 +180,104 @@ func Read(t *testing.T, nameAndOrExt string) *S {
 			}
 		}
 	}
-	return &S{T: t, Expected: m, Path: path}
+	return m, nil
 }
 
-func (s *S) KeyedSnap(t *testing.T, k string, v any) {
-	t.Run(k, func(t *testing.T) { s.Snap(t, v) })
-}
-
-func (s *S) Snap(t *testing.T, v any) {
-	// we pass t instead of using s.T to handle nested t.Run correctly
-	t.Helper()
-	name, actual := s.Marshal(t, v)
-	if expected := s.Expected[name]; !doUpdate() && actual != expected {
-		d, _ := Diff(expected, actual, "\n").Render(true)
-		t.Log("\n" + d)
-		t.Cleanup(func() { t.Fatalf("Failed: %q", t.Name()) })
+func Write(path string, actual []X) error {
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		return fmt.Errorf("FAILED to write snap: %q already exists", path)
 	}
-}
-
-func (s *S) Write() {
-	s.Helper()
-	if s.Failed() || len(s.Actual) == 0 || !doUpdate() {
-		return
-	}
-	if _, err := os.Stat(s.Path); !os.IsNotExist(err) {
-		s.Fatalf("FAILED to write snap: %q already exists", s.Path)
-	}
-	switch filepath.Ext(s.Path) {
+	content := ""
+	switch filepath.Ext(path) {
 	case ".json":
 		m := map[string]json.RawMessage{}
-		for _, x := range s.Actual {
-			m[x[1]] = json.RawMessage(jsonSpaceUnreplacer.Replace(x[2]))
+		for _, x := range actual {
+			m[x.K] = json.RawMessage(jsonSpaceUnreplacer.Replace(x.V))
 		}
-		_, content := s.marshal(s.T, m)
-		s.write(strings.TrimSpace(jsonSpaceReplacer.Replace(content)) + "\n")
+		_, v, err := marshal(m)
+		if err != nil {
+			return err
+		}
+		content = strings.TrimSpace(jsonSpaceReplacer.Replace(v)) + "\n"
 	default:
 		w := &strings.Builder{}
-		for _, x := range s.Actual {
-			kind, name, body := x[0], x[1], x[2]
-			body = "  " + strings.Join(strings.Split(body, "\n"), "\n  ")
-			if kind == "text" || kind == "html" {
-				fmt.Fprintf(w, "<noscript name=%q>\n%s\n</noscript>\n\n", name, body)
+		for _, x := range actual {
+			body := "  " + strings.Join(strings.Split(x.V, "\n"), "\n  ")
+			if x.Kind == "text" || x.Kind == "html" {
+				fmt.Fprintf(w, "<noscript name=%q>\n%s\n</noscript>\n\n", x.K, body)
 			} else {
-				fmt.Fprintf(w, "<script type=%q name=%q>\n%s\n</script>\n\n", kind, name, body)
+				fmt.Fprintf(w, "<script type=%q name=%q>\n%s\n</script>\n\n", x.Kind, x.K, body)
 			}
 		}
-		s.write(strings.TrimSpace(w.String()) + "\n")
+		content = strings.TrimSpace(w.String()) + "\n"
 	}
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write snap: %w", err)
+	}
+	return nil
 }
 
-func (s *S) write(content string) {
-	if err := os.WriteFile(s.Path, []byte(content), 0644); err != nil {
-		s.Fatalf("failed to write snap: %v", err)
-	}
-}
-
-func (s *S) Marshal(t *testing.T, v any) (string, string) {
-	s.Helper()
-	name, parts := strconv.Itoa(len(s.Actual)), strings.SplitN(t.Name(), "/", 2)
+func Marshal(name string, actual []X, v any) (X, error) {
+	name, parts := strconv.Itoa(len(actual)), strings.SplitN(name, "/", 2)
 	if len(parts) == 2 {
 		name = parts[1]
 	}
-	if slices.ContainsFunc(s.Actual, func(x [3]string) bool { return x[1] == name }) {
-		name += "-" + strconv.Itoa(len(s.Actual))
+	if slices.ContainsFunc(actual, func(x X) bool { return x.K == name }) {
+		name += "-" + strconv.Itoa(len(actual))
 	}
-	kind, actual := s.marshal(t, v)
-	s.Actual = append(s.Actual, [3]string{kind, name, actual})
-	return name, actual
+	kind, s, err := marshal(v)
+	if err != nil {
+		return X{}, err
+	}
+	return X{name, s, kind}, nil
 }
 
-func (s *S) marshal(t *testing.T, v any) (string, string) {
-	t.Helper()
+func marshal(v any) (string, string, error) {
 	switch v := v.(type) {
 	case T:
-		return v.Type, v.V
+		return v.Type, v.V, nil
 	case string:
-		return "text", v
+		return "text", v, nil
 	case []byte:
-		return "text", string(v)
+		return "text", string(v), nil
+	case json.RawMessage:
+		return "application/json", jsonSpaceReplacer.Replace(string(v)), nil
 	case fmt.Stringer:
-		return "text", v.String()
+		return "text", v.String(), nil
 	case encoding.TextMarshaler:
 		bs, err := v.MarshalText()
 		if err != nil {
-			t.Fatalf("failed to marshal %T: %v", v, err)
+			return "", "", fmt.Errorf("failed to marshal %T: %w", v, err)
 		}
-		return "text", string(bs)
+		return "text", string(bs), nil
 	case HTML:
-		return "html", string(v)
-	case json.RawMessage:
-		return "application/json", jsonSpaceReplacer.Replace(string(v))
+		return "html", string(v), nil
 	default:
 		w := &bytes.Buffer{}
 		e := json.NewEncoder(w)
 		e.SetEscapeHTML(false)
 		e.SetIndent("", "  ")
 		if err := e.Encode(v); err != nil {
-			t.Fatalf("failed to marshal %T: %v", v, err)
+			return "", "", fmt.Errorf("failed to marshal %T: %w", v, err)
 		}
-		s := jsonSpaceReplacer.Replace(string(w.Bytes()))
-		return "application/json", strings.TrimSpace(s)
+		s := jsonSpaceReplacer.Replace(w.String())
+		return "application/json", strings.TrimSpace(s), nil
 	}
+}
+
+func ClearSnaps() error {
+	pattern := "testdata/*.snap.*"
+	log.Printf("clearing old snaps: %q", pattern)
+	ps, err := filepath.Glob(pattern)
+	if err != nil {
+		return fmt.Errorf("failed to clear snaps: glob: %w", err)
+	}
+	for _, p := range ps {
+		if err := os.Remove(p); err != nil {
+			return fmt.Errorf("failed to clear snaps: rm %q: %w", p, err)
+		}
+	}
+	return nil
 }
 
 func snapPath(t *testing.T, nameAndOrExt string) string {
@@ -253,21 +293,7 @@ func snapPath(t *testing.T, nameAndOrExt string) string {
 	return filepath.Join("testdata", name)
 }
 
-func clearSnaps() {
-	pattern := "testdata/*.snap.*"
-	log.Printf("clearing old snaps: %q", pattern)
-	ps, err := filepath.Glob(pattern)
-	if err != nil {
-		panic(fmt.Sprintf("failed to clear snaps: glob: %v", err))
-	}
-	for _, p := range ps {
-		if err := os.Remove(p); err != nil {
-			panic(fmt.Sprintf("failed to clear snaps: rm %q: %v", p, err))
-		}
-	}
-}
-
-func doUpdate() bool {
+func DoUpdate() bool {
 	v := strings.ToLower(os.Getenv("UPDATE_SNAPS"))
 	return *updateSnaps || v == "true" || v == "1"
 }
