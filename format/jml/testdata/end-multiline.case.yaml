@@ -1,0 +1,4 @@
+foo: |
+  document ending in multiline string
+
+  is handled correctly

@@ -33,6 +33,21 @@
     - null
 </noscript>
 
+<script type="application/json" name="end-multiline/json">
+  {
+    "foo": "document ending in multiline string
+  	
+  	is handled correctly"
+  }
+</script>
+
+<noscript name="end-multiline/jml">
+  foo: |
+    document ending in multiline string
+    
+    is handled correctly
+</noscript>
+
 <script type="application/json" name="error/json">
   jml unmarshal: remainder: [{number 1 17 2}]
 </script>

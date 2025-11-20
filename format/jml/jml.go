@@ -231,19 +231,20 @@ func (j *jmlLexer) lexMultiLineString() lexFn {
 			lines = append(lines, rl)
 		} else if len(rl)-len(tl) >= lvl {
 			lines = append(lines, rl[lvl:])
+		} else if j.i >= len(j.in) {
+			break
 		} else {
 			j.i -= c + 2
 			break
 		}
 	}
 	v := `"` + strings.ReplaceAll(strings.Join(lines, "\n"), "\n", "\\n") + `"`
-	j.start, j.ts = j.i, append(j.ts, token{"string", v, j.start, j.lvl})
-	return j.lexSpace
+	return j.emit("string", v, j.lexSpace)
 }
 
 func (j *jmlLexer) lexComment() lexFn {
 	j.acceptWhile(func(r rune) bool { return r != '\n' }, -1)
-	j.start, j.i = j.i, j.i
+	j.start = j.i
 	return j.lexSpace
 }
 

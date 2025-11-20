@@ -8,7 +8,7 @@ import (
 )
 
 func RoundTrip(t *testing.T, bs []byte) {
-	v, asJSON, failed := interface{}(nil), "", false
+	v, asJSON, failed := any(nil), "", false
 	if err := Unmarshal(bs, &v); err != nil {
 		asJSON, failed = "jml unmarshal: "+err.Error(), true
 	} else if bs, err := json.MarshalIndent(v, "", "  "); err != nil {
