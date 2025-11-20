@@ -92,7 +92,10 @@ func (s *Session) Eval(js string, v any) error {
 func (s *Session) eval(js string, id int, v any) error {
 	r, params := struct {
 		Result struct{ Value json.RawMessage }
-	}{}, Params{"expression": js, "returnByValue": true, "replMode": true, "awaitPromise": true, "contextId": id}
+	}{}, Params{"expression": js, "returnByValue": true, "replMode": true, "awaitPromise": true}
+	if id != 0 {
+		params["contextId"] = id
+	}
 	if err := s.Exec("Runtime.evaluate", params, &r); err != nil {
 		return err
 	}
@@ -128,7 +131,7 @@ func (s *Session) Close() error {
 }
 
 func (s *Session) Bind(name string, f any) {
-	if err := s.bind(name, nil, f); err != nil {
+	if err := s.bind(name, &s.contextID, f); err != nil {
 		panic(err)
 	}
 }
@@ -154,7 +157,7 @@ func (s *Session) bind(name string, contextId *int, f any) error {
 	s.bindings[name] = fv
 	s.Unlock()
 	params := Params{"name": name}
-	if contextId != nil {
+	if contextId != nil && *contextId != 0 {
 		params["executionContextId"] = *contextId
 	}
 	if err := s.Exec("Runtime.addBinding", params, nil); err != nil {

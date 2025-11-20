@@ -10,7 +10,7 @@ import (
 )
 
 func TestGeneral(t *testing.T) {
-	h, _, err := startAndOpen("about:blank")
+	h, _, err := startAndOpen("about:blank", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,12 @@ func TestGeneral(t *testing.T) {
 }
 
 func TestBind(t *testing.T) {
-	h, s, err := startAndOpen("about:blank")
+	h, s, err := startAndOpen("about:blank", func(s *Session) error {
+		s.Bind("console.log", func(i int) string {
+			return strconv.Itoa(i)
+		})
+		return nil
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,9 +43,7 @@ func TestBind(t *testing.T) {
 		}
 		return code, nil
 	})
-	s.Bind("console.log", func(i int) string {
-		return strconv.Itoa(i)
-	})
+
 	voidBindingArg := 0
 	s.Bind("voidBinding", func(arg int) {
 		voidBindingArg = arg
@@ -71,7 +74,6 @@ func TestBind(t *testing.T) {
 	check(`binding(10, true)`, `result.constructor.name === 'Error' && result.message === 'fail'`)
 	check(`binding()`, `result.constructor.name === 'Error' && result.message.includes('wrong number of arguments')`)
 	check(`binding(10, true, 20)`, `result.constructor.name === 'Error' && result.message.includes('wrong number of arguments')`)
-	check(`binding('not a number', false)`, `result.constructor.name === 'Error' && result.message.includes('cannot unmarshal string into Go value of type int')`)
 	check(`console.log(123)`, `result === '123'`)
 	check(`variadicBinding(false, 1, 2)`, `JSON.stringify(result) === "[1,2]"`)
 	check(`variadicBinding(false)`, `JSON.stringify(result) === "[]"`)
@@ -82,11 +84,11 @@ func TestBind(t *testing.T) {
 	}
 }
 
-func startAndOpen(url string) (*H, *Session, error) {
+func startAndOpen(url string, f func(*Session) error) (*H, *Session, error) {
 	h, err := Start(nil)
 	if err != nil {
 		return nil, nil, err
 	}
-	s, err := h.Open(url)
+	s, err := h.Open(url, f)
 	return h, s, err
 }

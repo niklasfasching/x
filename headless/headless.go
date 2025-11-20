@@ -140,13 +140,12 @@ func (h *H) Open(url string, f func(*Session) error) (*Session, error) {
 		return nil, err
 	}
 	s := &Session{
-		id:        ar.SessionId,
-		targetID:  cr.TargetId,
-		contextID: 1,
-		h:         h,
-		handlers:  map[string][]*Handler{},
-		bindings:  map[string]reflect.Value{},
-		Err:       make(chan error),
+		id:       ar.SessionId,
+		targetID: cr.TargetId,
+		h:        h,
+		handlers: map[string][]*Handler{},
+		bindings: map[string]reflect.Value{},
+		Err:      make(chan error),
 	}
 	h.Lock()
 	h.sessions[ar.SessionId] = s
@@ -167,7 +166,7 @@ func (s *Session) Init() error {
 		}
 	}
 	s.Handle("Runtime.bindingCalled", s.onBindingCalled)
-	s.Handle("Runtime.exceptionThrown", func(m json.RawMessage) { go func() { s.Err <- fmt.Errorf(FormatException(m)) }() })
+	s.Handle("Runtime.exceptionThrown", func(m json.RawMessage) { go func() { s.Err <- fmt.Errorf("%s", FormatException(m)) }() })
 	type ExecutionContextCreated struct {
 		Context struct {
 			Id      int
