@@ -6,13 +6,16 @@ import (
 	_ "embed"
 	"encoding/json/v2"
 	"fmt"
+	"log"
 	"reflect"
 	"regexp"
 	"strings"
 	"text/template"
 	"time"
 
-	"golang.org/x/exp/slices"
+	"slices"
+
+	"golang.org/x/exp/maps"
 )
 
 type Args map[string]any
@@ -166,14 +169,6 @@ func Copy(name string, oldDB, newDB *DB) error {
 	return nil
 }
 
-func JSONIndex(name, table, id string, cols ...string) string {
-	return FTSIndex(name, table, id, "json", cols...)
-}
-
-func HTMLIndex(name, table, id string, cols ...string) string {
-	return FTSIndex(name, table, id, "html", cols...)
-}
-
 func FTSIndex(name, table, id, tokenizer string, cols ...string) string {
 	return Template("fts", map[string]any{
 		"name":      name,
@@ -185,6 +180,7 @@ func FTSIndex(name, table, id, tokenizer string, cols ...string) string {
 }
 
 func (a Args) Render(tpl string) (string, []any, error) {
+	a = maps.Clone(a)
 	if a["args"] != nil {
 		return "", nil, fmt.Errorf("special kv Args.args must not be set")
 	}
@@ -198,6 +194,7 @@ func (a Args) Render(tpl string) (string, []any, error) {
 		"values": a.values,
 		"cols":   a.cols,
 		"set":    a.set,
+		"raw":    a.raw,
 	}).Parse(tpl)
 	if err != nil {
 		return "", nil, err
@@ -205,6 +202,9 @@ func (a Args) Render(tpl string) (string, []any, error) {
 	w := &strings.Builder{}
 	if err := t.Execute(w, a); err != nil {
 		return "", nil, err
+	}
+	if a["_debug"] == true {
+		log.Printf("DEBUG: sq.Args Render:\n%s (%v)", w.String(), a["args"])
 	}
 	return w.String(), a["args"].([]any), nil
 }
@@ -229,9 +229,7 @@ func (a Args) set(k string) (string, error) {
 }
 
 func (a Args) cols(k string) (string, error) {
-	cols := a[k].([]string)
-	slices.Sort(cols)
-	cols = slices.Compact(cols)
+	cols := slices.Compact(slices.Sorted(slices.Values(a[k].([]string))))
 	for i, c := range cols {
 		if c, err := a.ident(c); err != nil {
 			return "", err
@@ -247,6 +245,10 @@ func (a Args) ident(v string) (string, error) {
 		return "", fmt.Errorf("(%q) is not a valid sql identifier", v)
 	}
 	return "`" + v + "`", nil
+}
+
+func (a Args) raw(k string) string {
+	return a[k].(string)
 }
 
 func (a Args) quote(k string) (string, error) {

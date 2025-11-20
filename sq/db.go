@@ -97,21 +97,22 @@ func (t *Table[T]) Modify(id any, f func(*T) error, ks ...string) error {
 }
 
 func (t *Table[T]) Update(v T, ks ...string) error {
+	if len(ks) == 0 {
+		return fmt.Errorf("update w/o keys")
+	}
 	idK, idV, kvs := RowMap(v)
 	if rv := reflect.ValueOf(idV); rv.IsZero() {
 		return fmt.Errorf("update requires non-empty %q: %#v", idK, v)
 	}
-	if len(ks) != 0 {
-		nkvs := map[string]any{}
-		for _, k := range ks {
-			if v, ok := kvs[k]; ok {
-				nkvs[k] = v
-			} else {
-				return fmt.Errorf("k %q not in %v", k, kvs)
-			}
+	nkvs := map[string]any{}
+	for _, k := range ks {
+		if v, ok := kvs[k]; ok {
+			nkvs[k] = v
+		} else {
+			return fmt.Errorf("k %q not in %v", k, kvs)
 		}
-		kvs = nkvs
 	}
+	kvs = nkvs
 	return Update(t.DB, t.name, idK, idV, kvs)
 }
 

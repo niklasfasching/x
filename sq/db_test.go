@@ -35,7 +35,7 @@ func TestSchemaAutoTimestamp(t *testing.T) {
 		if d := v2.UpdatedAt.Sub(v1.UpdatedAt); d < 500*time.Millisecond {
 			t.Fatalf("expected UpdateAt to default to now: %v", d)
 		}
-		if d1, d2 := v2.CreatedAt.Sub(v1.CreatedAt), time.Now().Sub(v1.CreatedAt); d1 != 0 ||
+		if d1, d2 := v2.CreatedAt.Sub(v1.CreatedAt), time.Since(v1.CreatedAt); d1 != 0 ||
 			d2 > 2*time.Second {
 			t.Fatalf("expected CreatedAt to be unchanged now-1s: %v %v %v", v2.CreatedAt, d1, d2)
 		}
@@ -49,7 +49,7 @@ func TestSchemaAutoTimestamp(t *testing.T) {
 		if d := v2.UpdatedAt.Sub(v1.UpdatedAt); d < 500*time.Millisecond {
 			t.Fatalf("UpdatedAt not in Update: expected UpdateAt to default to now: %v", d)
 		}
-		if d1, d2 := v2.CreatedAt.Sub(v1.CreatedAt), time.Now().Sub(v1.CreatedAt); d1 != 0 ||
+		if d1, d2 := v2.CreatedAt.Sub(v1.CreatedAt), time.Since(v1.CreatedAt); d1 != 0 ||
 			d2 > 2*time.Second {
 			t.Fatalf("expected CreatedAt to be unchanged now-1s: %v %v %v", v2.CreatedAt, d1, d2)
 		}

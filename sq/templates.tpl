@@ -6,6 +6,8 @@ CREATE VIRTUAL TABLE {{ .name }} USING
   content='{{ .table }}', content_rowid='{{ .id }}', tokenize='{{ $tokenizer }}');
 
 CREATE VIRTUAL TABLE {{ .name}}_rows USING fts5vocab('{{ .name }}', 'row');
+CREATE VIRTUAL TABLE {{ .name}}_instances USING fts5vocab('{{ .name }}', 'instance');
+CREATE VIRTUAL TABLE {{ .name}}_cols USING fts5vocab('{{ .name }}', 'col');
 
 CREATE TRIGGER {{ .name }}_ai AFTER INSERT ON {{ .table }} BEGIN
   INSERT INTO {{ .name }}(rowid, {{ range $i, $col := .cols}}{{ if $i }}, {{ end }}{{ $col }}{{ end }})

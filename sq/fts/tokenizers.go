@@ -5,51 +5,62 @@ package fts
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"golang.org/x/net/html"
 )
 
-type html2text struct {
-	strings.Builder
-	endsInWhitespace bool
-}
-
 var tokenRe = regexp.MustCompile(`[\p{L}\p{N}]+`)
 
 func HTML(text string, flags int, cb func(token string, flags, start, end int) error) error {
-	if flags&int(TokenizeQuery) == 0 {
-		doc, err := html.Parse(strings.NewReader(text))
-		if err != nil {
-			return err
+	if flags&int(TokenizeQuery) != 0 {
+		for _, ij := range tokenRe.FindAllStringIndex(text, -1) {
+			if err := cb(strings.ToLower(text[ij[0]:ij[1]]), 0, ij[0], ij[1]); err != nil {
+				return err
+			}
 		}
-		text = (&html2text{}).extract(doc).String()
+		return nil
 	}
-	for _, ij := range tokenRe.FindAllStringIndex(text, -1) {
-		if err := cb(strings.ToLower(text[ij[0]:ij[1]]), 0, ij[0], ij[1]); err != nil {
-			return err
+	return htmlText(text, func(off int, text string) error {
+		for _, m := range tokenRe.FindAllStringIndex(text, -1) {
+			start, end := off+m[0], off+m[1]
+			if err := cb(strings.ToLower(text[m[0]:m[1]]), 0, start, end); err != nil {
+				return err
+			}
 		}
-	}
-	return nil
+		return nil
+	})
 }
 
-func (h *html2text) extract(n *html.Node) *html2text {
-	if n.Type == html.TextNode && len(n.Data) != 0 {
-		if !h.endsInWhitespace {
-			h.WriteString(" ")
+func htmlText(in string, cb func(off int, text string) error) error {
+	z, off, skip := html.NewTokenizer(strings.NewReader(in)), 0, false
+	for {
+		t := z.Next()
+		if t == html.ErrorToken {
+			break
 		}
-		h.endsInWhitespace = unicode.IsSpace(rune(n.Data[(len(n.Data) - 1)]))
-		h.WriteString(n.Data)
-	}
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if c.Type == html.ElementNode && (c.Data == "script" || c.Data == "style") {
-			continue
+		raw := string(z.Raw())
+		switch t {
+		case html.StartTagToken, html.EndTagToken:
+			tag, _ := z.TagName()
+			if v := strings.ToLower(string(tag)); v == "script" || v == "style" {
+				skip = t == html.StartTagToken
+			}
+		case html.TextToken:
+			if !skip {
+				if err := cb(off, raw); err != nil {
+					return err
+				}
+			}
 		}
-		h.extract(c)
+		off += len(raw)
 	}
-	return h
+	if err := z.Err(); err != io.EOF {
+		return err
+	}
+	return nil
 }
 
 func JSON(text string, flags int, cb func(token string, flags, start, end int) error) error {
