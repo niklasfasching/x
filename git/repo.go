@@ -85,7 +85,12 @@ func NewGitHub(path string, key []byte) (*Remote, error) {
 }
 
 func PushGitHub(path, ref string, key []byte, f func(*Commit) error, kvs ...string) error {
-	r, err := NewGitHub(path, key)
+	parts := strings.SplitN(path, "/", 3)
+	repo, dir := parts[0]+"/"+parts[1], "/"
+	if len(parts) == 3 {
+		dir = parts[2]
+	}
+	r, err := NewGitHub(repo, key)
 	if err != nil {
 		return err
 	}
@@ -95,7 +100,7 @@ func PushGitHub(path, ref string, key []byte, f func(*Commit) error, kvs ...stri
 	} else if err := f(c); err != nil {
 		return err
 	}
-	packData, isEmpty := c.PackData("/")
+	packData, isEmpty := c.PackData(dir)
 	if isEmpty {
 		log.Println("git push: already up to date")
 		return nil
@@ -132,7 +137,7 @@ func (c *Commit) Add(path string, content []byte) (changed bool) {
 	if _, unchanged := c.Parent.Objects[blobHash]; !unchanged {
 		c.Objects[blobHash], changed = blobObject, true
 	}
-	lvl, parts := c.FS, strings.Split(path, "/")
+	lvl, parts := c.FS, strings.Split(strings.TrimLeft(path, "/"), "/")
 	for i, name := range parts {
 		if i == len(parts)-1 {
 			lvl[name] = blobHash
@@ -209,8 +214,8 @@ func (c *Commit) buildTree(fs map[string]any) string {
 			subTreeHash := c.buildTree(dir)
 			hashBytes, _ := hex.DecodeString(subTreeHash)
 			entry = append([]byte(fmt.Sprintf("40000 %s\x00", name)), hashBytes...)
-		} else {
-			hashBytes, _ := hex.DecodeString(v.(string))
+		} else if s, ok := v.(string); ok {
+			hashBytes, _ := hex.DecodeString(s)
 			entry = append([]byte(fmt.Sprintf("100644 %s\x00", name)), hashBytes...)
 		}
 		tree = append(tree, entry...)
@@ -230,6 +235,7 @@ func (r *Remote) Push(ref string, c *Commit, packData []byte) error {
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
+	defer stdin.Close()
 	defer stdout.Close()
 	cmd := fmt.Sprintf("%s %s %s\x00report-status", c.Parent.Hash, c.Hash, ref)
 	fmt.Fprintf(stdin, "%04x%s0000", len(cmd)+4, cmd)

@@ -81,6 +81,25 @@ func TestPushDir(t *testing.T) {
 	})
 }
 
+func TestPushGitHub(t *testing.T) {
+	path, ref, key := os.Getenv("GH_PATH"), os.Getenv("GH_REF"), os.Getenv("GH_KEY")
+	if key == "" || ref == "" || path == "" {
+		// ssh-keygen -t ed25519 -f test_key -N "" -q
+		// Add test_key.pub to github repo deploy keys with write permissions
+		// GH_KEY=$(cat test_key), GH_PATH=<owner>/<repo>/<dir>, GH_REF=main
+		t.Skip("Skip unless GH_* env vars are set")
+	}
+	err := PushGitHub(path, ref, []byte(key), func(c *Commit) error {
+		c.Add("foo/foo", []byte("foo"))
+		c.Add("bar/bar", []byte("bar"))
+		c.Add("baz", []byte("baz"))
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func initRepo(t *testing.T, files map[string]string) (string, string) {
 	t.Helper()
 	dir, err := os.MkdirTemp("", "git-test")
