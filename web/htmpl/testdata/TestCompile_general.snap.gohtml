@@ -1,12 +1,12 @@
 <noscript name="general/test-x-component/nodes-to-html">
-  <x-component static=static-value mixed="foo-{{ .a }}-bar" dynamic="{{ .a }}">
+  <x-component static=static-value mixed="foo-{{.a}}-bar" dynamic="{{.a}}">
     <slot name=a other-field=value-of-other-field>
       content of
       <b>
         slot a
       </b>
       value of parent a:
-      {{ .a }}
+      {{.a}}
       == value-of-a
     </slot>
     <div>
@@ -20,8 +20,8 @@
 </noscript>
 
 <noscript name="general/test-x-component/compiled">
-  {{with $_dot_45 := .}}
-    {{with $ := (dict "slots" (list (dict "name" "a" "other-field" "value-of-other-field")) "static" "static-value" "mixed" (print "foo-" .a "-bar") "dynamic" .a)}}
+  {{with $dot := .}}
+    {{with (dict "caller" "test-x-component" "slots" (list (dict "name" "a" "other-field" "value-of-other-field")) ("static") ("static-value") ("mixed") ((print "foo-" .a "-bar")) ("dynamic") (.a))}}
       Each component must have a template; the html inside is what is inlined and rendered at each callsite.
       The attributes passed to the component are available as fields on dot, e.g.
       - static attributes:
@@ -34,10 +34,13 @@
       {{.dynamic}}
       == value-of-a
   
-      In addition, slots from the call site are available as both variables and elements:
+      In addition, the name of the caller
+      {{.caller}}
+      as well as slots slots from the call site are available.
+      Slots are avaiable as both variables and elements:
       - Both named slots:
       slots.a:
-      {{with $_dot_45}}
+      {{with $dot}}
         content of
         <b>
           slot a
@@ -48,7 +51,7 @@
       {{end}}
       - And the rest:
       slots.rest:
-      {{with $_dot_45}}
+      {{with $dot}}
         <div>
           remaining content of
         </div>
@@ -66,7 +69,7 @@
         {{.otherField}}
         == value-of-other-field
       {{end}}
-      <div dynamic="{{with $_dot_45}} {{.a}} {{end}}" mixed="{{with $_dot_45}} {{(print "foo-" .a "-bar")}} {{end}}" static=static-value>
+      <div>
         the attributes set on the component can also be statically forwarded using
         <code>
           ...
@@ -89,7 +92,10 @@
   {{.dynamic}}
   == value-of-a
   
-      In addition, slots from the call site are available as both variables and elements:
+      In addition, the name of the caller
+  {{.caller}}
+  as well as slots slots from the call site are available.
+      Slots are avaiable as both variables and elements:
       - Both named slots:
       slots.a:
   {{.slots.a}}
@@ -105,7 +111,7 @@
     {{.otherField}}
     == value-of-other-field
   {{end}}
-  <div ...{{.}}>
+  <div ...{{.name .otherFieldo}}>
     the attributes set on the component can also be statically forwarded using
     <code>
       ...
@@ -138,7 +144,10 @@
       value-of-a
       == value-of-a
   
-      In addition, slots from the call site are available as both variables and elements:
+      In addition, the name of the caller
+      test-x-component
+      as well as slots slots from the call site are available.
+      Slots are avaiable as both variables and elements:
       - Both named slots:
       slots.a:
       
@@ -170,7 +179,7 @@
         value-of-other-field
         == value-of-other-field
       
-      <div dynamic=" value-of-a " mixed=" foo-value-of-a-bar " static=static-value>
+      <div>
         the attributes set on the component can also be statically forwarded using
         <code>
           ...

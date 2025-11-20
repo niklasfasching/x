@@ -1,30 +1,26 @@
 <noscript name="web-component/test-x-component/nodes-to-html">
-  <x-component foo=foo-value -bar=bar-value baz=baz-value -bam=bam-value a="with parent dot {{ .a }}"></x-component>
+  <x-component foo=foo-value bar=bar-value baz=baz-value bam=bam-value a="with parent dot {{.a}}"></x-component>
 </noscript>
 
 <noscript name="web-component/test-x-component/compiled">
-  {{with $_dot_7 := .}}
-    {{with $ := (dict "slots" (list) "foo" "foo-value" "-bar" "bar-value" "baz" "baz-value" "-bam" "bam-value" "a" (print "with parent dot " .a))}}
-      <x-component component=true class=" class" id=id a="{{with $_dot_7}} {{(print "with parent dot " .a)}} {{end}}" baz=baz-value foo=foo-value>
+  {{with $dot := .}}
+    {{with (dict "caller" "test-x-component" "slots" (list) ("foo") ("foo-value") ("bar") ("bar-value") ("baz") ("baz-value") ("bam") ("bam-value") ("a") ((print "with parent dot " .a)))}}
+      <x-component component=true class=" class" id=id bar=bar-value foo=foo-value>
         with component=true the component tag stays wrapped after inlining.
       Directives applied to the template get applied to the wrapper.
-      The `...` directive allows forwarding all non-minus-prefixed (~non-flag) parameters.
-      Differentiating which parameters get forwarded allows us e.g. ignore lists and dicts
-      that are passed for {range} rather than to be used as attributes.
-        <div a="{{with $_dot_7}} {{(print "with parent dot " .a)}} {{end}}" baz=baz-value foo=foo-value></div>
+      The `...` directive allows forwarding parameters.
+        <div a="{{with $dot}}{{(print "with parent dot " .a)}}{{end}}" bar=bar-value baz=baz-value foo=foo-value></div>
       </x-component>
     {{end}}
   {{end}}
 </noscript>
 
 <noscript name="web-component/test-x-component/compiled:<x-component>">
-  <x-component component=true ...{{.}} class=" class" id=id>
+  <x-component component=true ...{{.foo .bar}} class=" class" id=id>
     with component=true the component tag stays wrapped after inlining.
       Directives applied to the template get applied to the wrapper.
-      The `...` directive allows forwarding all non-minus-prefixed (~non-flag) parameters.
-      Differentiating which parameters get forwarded allows us e.g. ignore lists and dicts
-      that are passed for {range} rather than to be used as attributes.
-    <div ...{{.}}></div>
+      The `...` directive allows forwarding parameters.
+    <div ...{{.foo .bar .baz .a}}></div>
   </x-component>
 </noscript>
 
@@ -41,13 +37,11 @@
 <noscript name="web-component/test-x-component/executed">
   
     
-      <x-component component=true class=" class" id=id a=" with parent dot value-of-a " baz=baz-value foo=foo-value>
+      <x-component component=true class=" class" id=id bar=bar-value foo=foo-value>
         with component=true the component tag stays wrapped after inlining.
       Directives applied to the template get applied to the wrapper.
-      The `...` directive allows forwarding all non-minus-prefixed (~non-flag) parameters.
-      Differentiating which parameters get forwarded allows us e.g. ignore lists and dicts
-      that are passed for {range} rather than to be used as attributes.
-        <div a=" with parent dot value-of-a " baz=baz-value foo=foo-value></div>
+      The `...` directive allows forwarding parameters.
+        <div a="with parent dot value-of-a" bar=bar-value baz=baz-value foo=foo-value></div>
       </x-component>
     
   

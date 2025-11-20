@@ -1,5 +1,5 @@
 <noscript name="assets/test-assets/nodes-to-html">
-  {{ template "[assets]" "test-assets" }}
+  {{template "[assets]" "test-assets"}}
   <component></component>
   assets are rendered depth first and deduplicated, i.e. even though both
     [css-utilities] and [component] require  [css-reset], it is only included
@@ -8,8 +8,8 @@
 
 <noscript name="assets/test-assets/compiled">
   {{template "[assets]" "test-assets"}}
-  {{with $_dot_15 := .}}
-    {{with $ := (dict "slots" (list))}}
+  {{with $dot := .}}
+    {{with (dict "caller" "test-assets" "slots" (list))}}
       the component
     {{end}}
   {{end}}

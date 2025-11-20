@@ -1,16 +1,20 @@
 {{ define "<x-component>" }}
   <template>
     - the component params can be accessed: {{ .foo }} == foo-value
-    - slots have access to the parent scope
+    - slots have access to the parent scope and vars are not shadowed
+    {{ $var := "component scope" }}
     slots.a: {{ .slots.a }}
   </template>
 {{ end }}
 
-{{ define "test-slot-scope"  }}
+{{ define "test-slot-scope" }}
   value of a from callsite scope (outside component/slot): {{ .a }} == value-of-a
+  {{ $var := "callsite scope" }}
   <x-component foo="foo-value">
     <slot name="a">
-      value of a from callsite scope (inside slot): {{ .a }} == value-of-a
+      accessing the callsite scope inside a slot:
+      - value: {{ .a }} == value-of-a
+      - var: {{ $var }} == "callsite scope"
     </slot>
   </x-component>
 {{ end }}

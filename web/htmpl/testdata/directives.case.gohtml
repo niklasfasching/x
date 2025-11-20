@@ -6,4 +6,6 @@
   <div {{ if . }} foo=bar {{ end }}></div>
   <div .foo:="var-value" background:="blue" />
   <self-closing-works/><even-with-unquoted-attrs k=v/>
+  <misc multi-line="attribute values can be
+                    multiple lines"/>
 {{ end }}

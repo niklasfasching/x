@@ -6,7 +6,8 @@
     - mixed attributes: concatenated using print: {{ .mixed }} == foo-value-of-a-bar
     - dynamic attributes: {{ .dynamic }} == value-of-a
 
-    In addition, slots from the call site are available as both variables and elements:
+    In addition, the name of the caller {{ .caller }} as well as slots slots from the call site are available.
+    Slots are avaiable as both variables and elements:
     - Both named slots:
     slots.a: {{ .slots.a }}
     - And the rest:
@@ -17,7 +18,7 @@
       name:{{ .name }} == a
       other-field: {{ .otherField }} == value-of-other-field
     {{ end }}
-    <div ...{{ . }}>
+    <div ...{{ .name .otherFieldo }}>
       the attributes set on the component can also be statically forwarded using <code>...</code>
     </div>
   </template>

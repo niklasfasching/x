@@ -1,11 +1,9 @@
 {{ define "<x-component>" }}
-  <template component="true" .class #id ...{{ . }}>
+  <template component="true" .class #id ...{{ .foo .bar }}>
     with component=true the component tag stays wrapped after inlining.
     Directives applied to the template get applied to the wrapper.
-    The `...` directive allows forwarding all non-minus-prefixed (~non-flag) parameters.
-    Differentiating which parameters get forwarded allows us e.g. ignore lists and dicts
-    that are passed for {range} rather than to be used as attributes.
-    <div ...{{ . }}/>
+    The `...` directive allows forwarding parameters.
+    <div ...{{ .foo .bar .baz .a }}/>
   </template>
 
   <script>
@@ -18,8 +16,8 @@
 {{ end }}
 
 {{ define "test-x-component"  }}
-  <x-component foo="foo-value" -bar="bar-value"
-               baz="baz-value" -bam="bam-value"
+  <x-component foo="foo-value" bar="bar-value"
+               baz="baz-value" bam="bam-value"
                a="with parent dot {{ .a }}">
   </x-component>
 {{ end }}

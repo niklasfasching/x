@@ -11,6 +11,7 @@ import (
 func TestCompile(t *testing.T) {
 	data := map[string]any{
 		"a": "value-of-a",
+		"b": "value-of-b",
 	}
 	snap.Cases(t, "*.case.gohtml", func(t *testing.T, name string, bs []byte) {
 		sHTML := snap.NewNamed(t, ".gohtml")

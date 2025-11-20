@@ -1,12 +1,14 @@
 <noscript name="directives/test-directives/nodes-to-html">
   <div .class1 .class2 .class3 #id --css-var=1em></div>
-  <input type=checkbox checked?="{{ true }}">
-  <div .class="{{ true }}"></div>
+  <input type=checkbox checked?="{{true}}">
+  <div .class="{{true}}"></div>
   <div [gap]=3></div>
   <div {{if .}} foo=bar {{end}}></div>
   <div .foo:=var-value background:=blue></div>
   <self-closing-works></self-closing-works>
   <even-with-unquoted-attrs k=v></even-with-unquoted-attrs>
+  <misc multi-line="attribute values can be
+                      multiple lines"></misc>
 </noscript>
 
 <noscript name="directives/test-directives/compiled">
@@ -18,6 +20,8 @@
   <div class=" foo" style="; --foo: var-value;; background: blue;"></div>
   <self-closing-works></self-closing-works>
   <even-with-unquoted-attrs k=v></even-with-unquoted-attrs>
+  <misc multi-line="attribute values can be
+                      multiple lines"></misc>
 </noscript>
 
 <noscript name="directives/test-directives/executed">
@@ -29,4 +33,6 @@
   <div class=" foo" style="; --foo: var-value;; background: blue;"></div>
   <self-closing-works></self-closing-works>
   <even-with-unquoted-attrs k=v></even-with-unquoted-attrs>
+  <misc multi-line="attribute values can be
+                      multiple lines"></misc>
 </noscript>

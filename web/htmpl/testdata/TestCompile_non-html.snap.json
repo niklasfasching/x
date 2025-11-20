@@ -1,0 +1,70 @@
+{
+  "non-html/test-roundtripping/calls": {},
+  "non-html/test-roundtripping/nodes": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:template",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "name",
+          "Val": "json"
+        },
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{3}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:template",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "name",
+          "Val": "svg"
+        },
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{4}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    }
+  ]
+}

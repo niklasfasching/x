@@ -5,6 +5,8 @@ import (
 	"html/template"
 	"regexp"
 	"strings"
+
+	"slices"
 )
 
 var DefaultFuncs = template.FuncMap{"list": List, "dict": Dict}
@@ -12,27 +14,29 @@ var DefaultFuncs = template.FuncMap{"list": List, "dict": Dict}
 var attrKeyDirectiveRe = regexp.MustCompile(`^([\[#.-]+)?(.*?)([:?\]]+)?$`)
 var attrValStyleVarRe = regexp.MustCompile(`(--\w+)`)
 var kebabToCamelRe = regexp.MustCompile("-(.)")
+var camelToKebabRe = regexp.MustCompile("([a-z0-9])([A-Z])")
 
 func ProcessDirectives(c *Compiler, p *Frame, n *Node) {
 	kvs := map[string]string{}
 	for _, a := range n.Attrs {
 		m := attrKeyDirectiveRe.FindStringSubmatch(a.Key)
 		switch pre, k, suf, v := m[1], m[2], m[3], a.Val; {
-		case pre == "..." && c.ExpandString(k) == "." && v == "" && p.SlotDot != "":
-			for _, a := range p.Attrs { // forward all non-flag component attrs
-				if isFlag := strings.HasPrefix(a.Key, "-"); isFlag {
-					continue
+		case pre == "..." && suf == "" && !p.Root: // ... spread (defined) component params
+			if v := c.ExpandString(k); v == "." || c.Placeholders[k] == nil {
+				panic(fmt.Errorf("unexpected ... arg: %q (%q)", v, k))
+			} else {
+				v, ne := strings.CutPrefix(v, "ne ")
+				ks := strings.Fields(v)
+				for _, a := range p.Attrs {
+					if ok := slices.Contains(ks, "."+kebabToCamel(a.Key)); ne && !ok || !ne && ok {
+						if placeholderRe.MatchString(a.Val) {
+							kvs[a.Key] = c.FmtPlaceholder("{{with $dot}}{{%s}}{{end}}",
+								c.ExpandString(a.Val))
+						} else {
+							kvs[a.Key] = a.Val
+						}
+					}
 				}
-				k, v := a.Key, a.Val
-				if placeholderRe.MatchString(a.Key) {
-					k = c.FmtPlaceholder("{{with %s}} {{%s}} {{end}}",
-						p.SlotDot, c.ExpandString(a.Key))
-				}
-				if placeholderRe.MatchString(a.Val) {
-					v = c.FmtPlaceholder("{{with %s}} {{%s}} {{end}}",
-						p.SlotDot, c.ExpandString(a.Val))
-				}
-				kvs[k] = v
 			}
 		case pre == "." && suf == ":": // add class k and set --var k to v
 			v = attrValStyleVarRe.ReplaceAllString(v, "var($1)")
@@ -65,15 +69,18 @@ func List(vs ...any) any { return vs }
 func Dict(kvs ...any) any {
 	m := map[string]any{}
 	for i := 0; i < len(kvs); i += 2 {
-		if k, v := kvs[i].(string), kvs[i+1]; k == "..." && len(kvs) == 2 {
-			return v // TODO: lowerCamel struct field names
-		} else if k == "..." {
-			panic(fmt.Errorf("'...' must not be used with other kvs: got %v", kvs))
-		} else {
-			k := kebabToCamelRe.ReplaceAllStringFunc(strings.Trim(k, "-"),
-				func(s string) string { return strings.ToUpper(s[1:]) })
-			m[k] = v
-		}
+		k := kebabToCamelRe.ReplaceAllStringFunc(kvs[i].(string),
+			func(s string) string { return strings.ToUpper(s[1:]) })
+		m[k] = kvs[i+1]
 	}
 	return m
+}
+
+func kebabToCamel(s string) string {
+	return kebabToCamelRe.ReplaceAllStringFunc(strings.Trim(s, "-"),
+		func(s string) string { return strings.ToUpper(s[1:]) })
+}
+
+func camelToKebab(s string) string {
+	return strings.ToLower(camelToKebabRe.ReplaceAllString(s, "${1}-${2}"))
 }

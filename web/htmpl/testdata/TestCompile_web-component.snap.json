@@ -17,7 +17,7 @@
         },
         {
           "Namespace": "",
-          "Key": "...{{12}}",
+          "Key": "...{{11}}",
           "Val": ""
         },
         {
@@ -39,9 +39,7 @@
           "Text": "
 	  with component=true the component tag stays wrapped after inlining.
 	    Directives applied to the template get applied to the wrapper.
-	    The `...` directive allows forwarding all non-minus-prefixed (~non-flag) parameters.
-	    Differentiating which parameters get forwarded allows us e.g. ignore lists and dicts
-	    that are passed for {range} rather than to be used as attributes.
+	    The `...` directive allows forwarding parameters.
 	  ",
           "Attrs": null,
           "SelfClosing": false,
@@ -54,7 +52,7 @@
           "Attrs": [
             {
               "Namespace": "",
-              "Key": "...{{13}}",
+              "Key": "...{{12}}",
               "Val": ""
             }
           ],
@@ -120,7 +118,7 @@
         },
         {
           "Namespace": "",
-          "Key": "-bar",
+          "Key": "bar",
           "Val": "bar-value"
         },
         {
@@ -130,7 +128,7 @@
         },
         {
           "Namespace": "",
-          "Key": "-bam",
+          "Key": "bam",
           "Val": "bam-value"
         },
         {

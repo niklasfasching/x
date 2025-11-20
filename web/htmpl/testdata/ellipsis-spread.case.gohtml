@@ -1,0 +1,24 @@
+{{ define "<x>" }}
+  <template>
+    {{ $params := "shadowing var from callsite (solved via namespacing)" }}
+    {{ $someValue := "shadowed" }}
+    - {{ .value }} == nested value
+    - {{ .bValue }} == value-of-b
+    - {{ .someValue }} == 42
+    - {{ .c }} == eval(c)
+    Ellipsis inside component allows forwarding/spreading attributes of the component call
+    to child elements. Only values that exist are forwarded (to allow forwarding optional attributes)
+    <div ...{{ .value .bValue .c .undefined }}/>
+    It allows allows spreading all attributes except some via `ne`: (all except value and bValue)
+    <div ...{{ ne .value .bValue }}/>
+
+  </template>
+{{ end }}
+
+{{ define "test-ellipsis-spread"  }}
+  {{ $params := (dict "nested" (dict "value" "nested value")) }}
+  {{ $someValue := 42 }}
+  Ellipsis on he component call allows concisely passing values by their name,
+  fields, nested fields and even variables.
+  <x ...{{ $params.nested.value .a $someValue }} b-value={{.b}} c="eval(c)"/>
+{{ end }}

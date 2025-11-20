@@ -24,7 +24,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{73}}"
+          "Val": "{{78}}"
         }
       ],
       "SelfClosing": true,
@@ -49,7 +49,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{74}}"
+          "Val": "{{79}}"
         }
       ],
       "SelfClosing": true,
@@ -74,7 +74,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{75}}"
+          "Val": "{{80}}"
         }
       ],
       "SelfClosing": true,
@@ -86,7 +86,32 @@
       "Text": "
 	== value-of-a
 	
-	    In addition, slots from the call site are available as both variables and elements:
+	    In addition, the name of the caller
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{81}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	as well as slots slots from the call site are available.
+	    Slots are avaiable as both variables and elements:
 	    - Both named slots:
 	    slots.a:
 	",
@@ -102,7 +127,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{76}}"
+          "Val": "{{82}}"
         }
       ],
       "SelfClosing": true,
@@ -127,7 +152,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{77}}"
+          "Val": "{{83}}"
         }
       ],
       "SelfClosing": true,
@@ -151,7 +176,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{78}}"
+          "Val": "{{84}}"
         },
         {
           "Namespace": "",
@@ -200,7 +225,7 @@
                 {
                   "Namespace": "",
                   "Key": "pipe",
-                  "Val": "{{82}}"
+                  "Val": "{{88}}"
                 }
               ],
               "SelfClosing": true,
@@ -225,7 +250,7 @@
                 {
                   "Namespace": "",
                   "Key": "pipe",
-                  "Val": "{{83}}"
+                  "Val": "{{89}}"
                 }
               ],
               "SelfClosing": true,
@@ -261,7 +286,7 @@
       "Attrs": [
         {
           "Namespace": "",
-          "Key": "...{{72}}",
+          "Key": "...{{77}}",
           "Val": ""
         }
       ],

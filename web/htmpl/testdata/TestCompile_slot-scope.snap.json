@@ -22,7 +22,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{24}}"
+          "Val": "{{39}}"
         }
       ],
       "SelfClosing": true,
@@ -33,8 +33,7 @@
       "Tag": "",
       "Text": "
 	== foo-value
-	    - slots have access to the parent scope
-	    slots.a:
+	    - slots have access to the parent scope and vars are not shadowed
 	",
       "Attrs": null,
       "SelfClosing": false,
@@ -48,7 +47,31 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{25}}"
+          "Val": "{{40}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	slots.a:
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{41}}"
         }
       ],
       "SelfClosing": true,
@@ -74,7 +97,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{3}}"
+          "Val": "{{5}}"
         }
       ],
       "SelfClosing": true,
@@ -84,6 +107,29 @@
       "Type": 1,
       "Tag": "",
       "Text": " == value-of-a
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{6}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
 	  ",
       "Attrs": null,
       "SelfClosing": false,
@@ -128,7 +174,8 @@
               "Type": 1,
               "Tag": "",
               "Text": "
-	      value of a from callsite scope (inside slot): ",
+	      accessing the callsite scope inside a slot:
+	      - value: ",
               "Attrs": null,
               "SelfClosing": false,
               "Children": null
@@ -141,7 +188,7 @@
                 {
                   "Namespace": "",
                   "Key": "pipe",
-                  "Val": "{{4}}"
+                  "Val": "{{7}}"
                 }
               ],
               "SelfClosing": true,
@@ -151,6 +198,29 @@
               "Type": 1,
               "Tag": "",
               "Text": " == value-of-a
+	      - var: ",
+              "Attrs": null,
+              "SelfClosing": false,
+              "Children": null
+            },
+            {
+              "Type": 3,
+              "Tag": "t:action",
+              "Text": "",
+              "Attrs": [
+                {
+                  "Namespace": "",
+                  "Key": "pipe",
+                  "Val": "{{8}}"
+                }
+              ],
+              "SelfClosing": true,
+              "Children": null
+            },
+            {
+              "Type": 1,
+              "Tag": "",
+              "Text": " == \"callsite scope\"
 	    ",
               "Attrs": null,
               "SelfClosing": false,

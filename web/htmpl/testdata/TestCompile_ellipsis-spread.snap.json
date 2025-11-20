@@ -1,11 +1,162 @@
 {
-  "directives/test-directives/calls": {},
-  "directives/test-directives/nodes": [
+  "ellipsis-spread/test-ellipsis-spread/calls": {
+    "test-ellipsis-spread": [
+      "<x>"
+    ]
+  },
+  "ellipsis-spread/test-ellipsis-spread/compiled:<x>#01": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{71}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
     {
       "Type": 1,
       "Tag": "",
       "Text": "
-	  ",
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{72}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	-
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{73}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	== nested value
+	    -
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{74}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	== value-of-b
+	    -
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{75}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	== 42
+	    -
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{76}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	== eval(c)
+	    Ellipsis inside component allows forwarding/spreading attributes of the component call
+	    to child elements. Only values that exist are forwarded (to allow forwarding optional attributes)
+	",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -17,33 +168,40 @@
       "Attrs": [
         {
           "Namespace": "",
-          "Key": ".class1",
+          "Key": "...{{69}}",
           "Val": ""
-        },
-        {
-          "Namespace": "",
-          "Key": ".class2",
-          "Val": ""
-        },
-        {
-          "Namespace": "",
-          "Key": ".class3",
-          "Val": ""
-        },
-        {
-          "Namespace": "",
-          "Key": "#id",
-          "Val": ""
-        },
-        {
-          "Namespace": "",
-          "Key": "--css-var",
-          "Val": "1em"
         }
       ],
       "SelfClosing": false,
       "Children": null
     },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	It allows allows spreading all attributes except some via `ne`: (all except value and bValue)
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "div",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "...{{70}}",
+          "Val": ""
+        }
+      ],
+      "SelfClosing": false,
+      "Children": null
+    }
+  ],
+  "ellipsis-spread/test-ellipsis-spread/compiled:[assets]<x>#01": null,
+  "ellipsis-spread/test-ellipsis-spread/nodes": [
     {
       "Type": 1,
       "Tag": "",
@@ -55,18 +213,13 @@
     },
     {
       "Type": 3,
-      "Tag": "input",
+      "Tag": "t:action",
       "Text": "",
       "Attrs": [
         {
           "Namespace": "",
-          "Key": "type",
-          "Val": "checkbox"
-        },
-        {
-          "Namespace": "",
-          "Key": "checked?",
-          "Val": "{{1}}"
+          "Key": "pipe",
+          "Val": "{{5}}"
         }
       ],
       "SelfClosing": true,
@@ -83,22 +236,24 @@
     },
     {
       "Type": 3,
-      "Tag": "div",
+      "Tag": "t:action",
       "Text": "",
       "Attrs": [
         {
           "Namespace": "",
-          "Key": ".class",
-          "Val": "{{2}}"
+          "Key": "pipe",
+          "Val": "{{6}}"
         }
       ],
-      "SelfClosing": false,
+      "SelfClosing": true,
       "Children": null
     },
     {
       "Type": 1,
       "Tag": "",
       "Text": "
+	  Ellipsis on he component call allows concisely passing values by their name,
+	  fields, nested fields and even variables.
 	  ",
       "Attrs": null,
       "SelfClosing": false,
@@ -106,119 +261,23 @@
     },
     {
       "Type": 3,
-      "Tag": "div",
+      "Tag": "x",
       "Text": "",
       "Attrs": [
         {
           "Namespace": "",
-          "Key": "[gap]",
-          "Val": "3"
-        }
-      ],
-      "SelfClosing": false,
-      "Children": null
-    },
-    {
-      "Type": 1,
-      "Tag": "",
-      "Text": "
-	  ",
-      "Attrs": null,
-      "SelfClosing": false,
-      "Children": null
-    },
-    {
-      "Type": 3,
-      "Tag": "div",
-      "Text": "",
-      "Attrs": [
-        {
-          "Namespace": "",
-          "Key": "{{3}}",
+          "Key": "...{{3}}",
           "Val": ""
-        }
-      ],
-      "SelfClosing": false,
-      "Children": null
-    },
-    {
-      "Type": 1,
-      "Tag": "",
-      "Text": "
-	  ",
-      "Attrs": null,
-      "SelfClosing": false,
-      "Children": null
-    },
-    {
-      "Type": 3,
-      "Tag": "div",
-      "Text": "",
-      "Attrs": [
-        {
-          "Namespace": "",
-          "Key": ".foo:",
-          "Val": "var-value"
         },
         {
           "Namespace": "",
-          "Key": "background:",
-          "Val": "blue"
-        }
-      ],
-      "SelfClosing": true,
-      "Children": null
-    },
-    {
-      "Type": 1,
-      "Tag": "",
-      "Text": "
-	  ",
-      "Attrs": null,
-      "SelfClosing": false,
-      "Children": null
-    },
-    {
-      "Type": 3,
-      "Tag": "self-closing-works",
-      "Text": "",
-      "Attrs": null,
-      "SelfClosing": true,
-      "Children": null
-    },
-    {
-      "Type": 3,
-      "Tag": "even-with-unquoted-attrs",
-      "Text": "",
-      "Attrs": [
+          "Key": "b-value",
+          "Val": "{{4}}"
+        },
         {
           "Namespace": "",
-          "Key": "k",
-          "Val": "v"
-        }
-      ],
-      "SelfClosing": true,
-      "Children": null
-    },
-    {
-      "Type": 1,
-      "Tag": "",
-      "Text": "
-	  ",
-      "Attrs": null,
-      "SelfClosing": false,
-      "Children": null
-    },
-    {
-      "Type": 3,
-      "Tag": "misc",
-      "Text": "",
-      "Attrs": [
-        {
-          "Namespace": "",
-          "Key": "multi-line",
-          "Val": "attribute values can be
-	                    multiple lines"
+          "Key": "c",
+          "Val": "eval(c)"
         }
       ],
       "SelfClosing": true,
