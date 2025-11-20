@@ -1,0 +1,25 @@
+<script type="application/json" name="0">
+  {
+    "BaseID": "19a0a084b9b98c04a22f4cac4a949148eb595a0350ba65e52e51eac3fb8b2c7c",
+    "Base": "ubuntu:24.04",
+    "Exec": "cowsay",
+    "Layers": [
+      {
+        "ID": "0f3b32124b2bf55200cccbf93f7f8f6f283ab057a5978e4b0ab074704215766a",
+        "K": "RUN",
+        "V": "apt-get install -y cowsay",
+        "WorkDir": "/",
+        "Env": [],
+        "Mounts": []
+      },
+      {
+        "ID": "e78f2b201d05f210c1241320a87b6027b547caf52d32ba940d325c300037a799",
+        "K": "COPY",
+        "V": ". .",
+        "WorkDir": "/",
+        "Env": [],
+        "Mounts": []
+      }
+    ]
+  }
+</script>
