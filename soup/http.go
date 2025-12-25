@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"crypto/tls"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -20,7 +21,6 @@ import (
 )
 
 type Cache interface {
-	Init() error
 	Key(*http.Request) (string, error)
 	Get(string, *http.Request) (*http.Response, error)
 	Set(string, *http.Request, *http.Response) error
@@ -37,20 +37,17 @@ type Transport struct {
 
 type FileCache struct{ Root string }
 
+var DefaultClient = Transport{Cache: &FileCache{"http"}}.Client()
 var invalidFileNameChars = regexp.MustCompile(`[^-_0-9a-zA-Z]+`)
 
-func (t Transport) Client() (*http.Client, error) {
+func (t Transport) Client() *http.Client {
 	if t.Transport == nil {
 		// some websites block via low tls verions (go defaults to 1.2)
 		t.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
 		}
 	}
-	c := &http.Client{Transport: &t}
-	if t.Cache == nil {
-		return c, nil
-	}
-	return c, t.Cache.Init()
+	return &http.Client{Transport: &t}
 }
 
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -112,8 +109,6 @@ func (c *FileCache) Key(req *http.Request) (string, error) {
 	return filepath.Join(c.Root, key+hex.EncodeToString(hash.Sum(nil))), nil
 }
 
-func (c *FileCache) Init() error { return os.MkdirAll(c.Root, os.ModePerm) }
-
 func (c *FileCache) Get(k string, req *http.Request) (*http.Response, error) {
 	bs, err := os.ReadFile(k)
 	if err != nil {
@@ -141,5 +136,5 @@ func (c *FileCache) Set(k string, req *http.Request, res *http.Response) error {
 		u = req.URL.String()
 	}
 	bs = append([]byte(u+"\n"), bs...)
-	return os.WriteFile(k, bs, os.ModePerm)
+	return errors.Join(os.MkdirAll(c.Root, 0755), os.WriteFile(k, bs, os.ModePerm))
 }
