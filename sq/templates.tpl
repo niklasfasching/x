@@ -36,8 +36,8 @@ CREATE TABLE IF NOT EXISTS {{ $t.name }}s (
       {{- $f.Name }} {{ $f.Kind }} {{ $f.Extra }}
         {{- if $f.Fallback }} DEFAULT '{{ $f.Fallback }}' {{ end }}
   {{- end }}
+  {{- if $t.rest }}, {{ $t.rest }} {{ end -}}
 );
-{{ .raw }}
 {{ end }}
 
 

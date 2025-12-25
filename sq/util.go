@@ -49,7 +49,7 @@ func Template(name string, v any) string {
 	return w.String()
 }
 
-func Schema(v any) string {
+func Schema(v any, rest ...string) string {
 	auto := map[string]string{
 		"CreatedAt": "create",
 		"UpdatedAt": "update",
@@ -82,6 +82,7 @@ func Schema(v any) string {
 		"name":   t.Name(),
 		"pk":     pk,
 		"fields": fields,
+		"rest":   strings.Join(rest, ", "),
 		"raw":    raw,
 	})
 }
