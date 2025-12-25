@@ -8,17 +8,20 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime/debug"
 	"time"
+
+	"github.com/niklasfasching/x/web/server"
 )
 
 type ErrHandler func(http.ResponseWriter, *http.Request) (int, error)
 
-type FilterFS struct {
-	http.FileSystem
-	Filter func(name string) bool
+type util struct{}
+
+type Option struct {
+	K, V              string
+	Selected, Default bool
 }
 
 //go:embed src
@@ -51,27 +54,7 @@ func (f ErrHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func AssetHandler(prefix string, dynamic bool) http.Handler {
-	return http.StripPrefix(prefix, http.FileServer(&FilterFS{http.FS(Assets(dynamic)), nil}))
-}
-
-func (fs *FilterFS) Open(name string) (http.File, error) {
-	if fs.Filter != nil && fs.Filter(name) {
-		return nil, os.ErrNotExist
-	} else if f, err := fs.FileSystem.Open(name); err != nil {
-		return nil, err
-	} else if s, err := f.Stat(); err != nil {
-		return nil, err
-	} else if !s.IsDir() {
-		return f, nil
-	} else if index := path.Join(name, "index.html"); fs.Filter != nil && fs.Filter(index) {
-		return nil, os.ErrNotExist
-	} else if f2, err := fs.FileSystem.Open(index); err != nil {
-		return nil, err
-	} else if err := f2.Close(); err != nil {
-		return nil, err
-	} else {
-		return f, nil
-	}
+	return http.StripPrefix(prefix, http.FileServer(&server.FilterFS{FileSystem: http.FS(Assets(dynamic))}))
 }
 
 func WithBasicAuth(h http.Handler, user, pass string, crash bool) http.Handler {
@@ -101,7 +84,6 @@ func WithBasicAuth(h http.Handler, user, pass string, crash bool) http.Handler {
 	})
 }
 
-type File interface {
-	Readdir(count int) ([]fs.FileInfo, error)
-	Stat() (fs.FileInfo, error)
+func (util) Exit() (any, error) {
+	return nil, TemplateExitErr
 }

@@ -1,72 +1,81 @@
+//go:build goexperiment.jsonv2
+
 package web
 
 import (
 	"bytes"
-	"encoding/json"
+	"compress/gzip"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
-	"log"
 	"net/http"
 	"net/url"
 	"reflect"
 	"regexp"
-	"runtime/debug"
 	"strings"
 
 	"golang.org/x/exp/slices"
 )
 
 type Context struct {
-	V any
+	*H
 	*http.Request
 	http.ResponseWriter
 	*template.Template
 	*bytes.Buffer
 }
 
+type H struct {
+	T *template.Template
+	fs.FS
+	Dev bool
+	http.ServeMux
+}
+
 var TemplateExitErr = fmt.Errorf("render partial template")
 var TemplateHandledErr = fmt.Errorf("skip template rendering")
 var camelToKebabRe = regexp.MustCompile("([a-z0-9])([A-Z])")
 
-func TemplateHandler(t *template.Template, tfs fs.FS, dev bool) http.Handler {
-	if !dev {
-		return templateHandler(t, tfs, dev)
+func (h *H) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if h.Dev {
+		ts, err := h.Compile()
+		if err != nil {
+			w.WriteHeader(500)
+			fmt.Fprintf(w, "%v", err)
+			return
+		}
+		h.Register(ts)
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if err := recover(); err != nil {
-				w.WriteHeader(500)
-				fmt.Fprintf(w, "%v", err)
-				log.Println(err, string(debug.Stack()))
-			}
-		}()
-		templateHandler(t, tfs, dev).ServeHTTP(w, r)
-	})
+	h.ServeMux.ServeHTTP(w, r)
 }
 
-func ServeTemplate(t *template.Template, pathKeys []string, w http.ResponseWriter, r *http.Request) {
-	if c, err := NewContext(t, pathKeys, w, r); err != nil {
-		c.ResponseWriter.WriteHeader(400)
-		fmt.Fprintf(c.ResponseWriter, "%s", err)
+func NewHandler(t *template.Template, tfs fs.FS, dev bool) *H {
+	h := &H{T: t, FS: tfs, Dev: dev}
+	if !h.Dev {
+		ts, err := h.Compile()
+		if err != nil {
+			panic(err)
+		}
+		h.Register(ts)
+	}
+	return h
+}
+
+func (h *H) ServeTemplate(t *template.Template, pathKeys []string, w http.ResponseWriter, r *http.Request) {
+	if c, err := h.NewContext(t, pathKeys, w, r); err != nil {
+		c.Respond(400, []byte(err.Error()))
 	} else if err := c.Execute(c.Buffer, c); errors.Is(err, TemplateHandledErr) {
-		return
 	} else if err == nil || errors.Is(err, TemplateExitErr) {
-		c.WriteTo(c.ResponseWriter)
+		c.Respond(200, c.Bytes())
 	} else {
-		log.Println(t.Name(), err)
-		c.ResponseWriter.WriteHeader(500)
-		fmt.Fprintf(c.ResponseWriter, "%s", err)
+		c.Respond(500, []byte(err.Error()))
 	}
 }
 
-func NewContext(t *template.Template, pathKeys []string, w http.ResponseWriter, r *http.Request) (*Context, error) {
-	t, err := t.Clone() // TODO: why clone
-	c := &Context{nil, r, w, t, &bytes.Buffer{}}
-	if err != nil {
-		return c, fmt.Errorf("failed to clone template: %w", err)
-	}
+func (h *H) NewContext(t *template.Template, pathKeys []string, w http.ResponseWriter, r *http.Request) (*Context, error) {
+	c := &Context{h, r, w, t, &bytes.Buffer{}}
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 		if err := r.ParseMultipartForm(int64(10 * 1e6)); err != nil {
 			return c, err
@@ -83,8 +92,37 @@ func NewContext(t *template.Template, pathKeys []string, w http.ResponseWriter, 
 	return c, nil
 }
 
+func (c *Context) Respond(statusCode int, bs []byte) {
+	if w := c.ResponseWriter; c.AcceptsEncoding("gzip") {
+		w.Header().Set("Content-Encoding", "gzip")
+		w.WriteHeader(statusCode)
+		gzw := gzip.NewWriter(w)
+		defer gzw.Close()
+		gzw.Write(bs)
+	} else {
+		w.WriteHeader(statusCode)
+		w.Write(bs)
+	}
+}
+
+func (c *Context) AcceptsEncoding(enc string) bool {
+	xs := strings.Split(c.Request.Header.Get("Accept-Encoding"), ",")
+	for _, x := range xs {
+		x = strings.ToLower(strings.TrimSpace(strings.SplitN(x, ";", 2)[0]))
+		if x == enc {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *Context) Get(k string) any {
 	return c.Form.Get(k)
+}
+
+func (c *Context) Set(k, v string) string {
+	c.Form.Set(k, v)
+	return ""
 }
 
 func (c *Context) IsFragment() bool {
@@ -111,12 +149,11 @@ func (c *Context) Exit() (any, error) {
 func (c *Context) JSON(code int, v any) (any, error) {
 	bs, err := json.Marshal(v)
 	if err != nil {
-		return TemplateHandledErr, err
+		return nil, err
 	}
-	c.WriteHeader(code)
 	c.ResponseWriter.Header().Set("Content-Type", "application/json")
-	c.ResponseWriter.Write(bs)
-	return TemplateHandledErr, TemplateHandledErr
+	c.Respond(code, bs)
+	return nil, TemplateHandledErr
 }
 
 func (c *Context) Redirect(code int, url string) error {
@@ -133,7 +170,6 @@ func (c *Context) Query(kvs ...string) any {
 }
 
 func (c *Context) Decode(v any) error {
-	c.V = v
 	rv := reflect.ValueOf(v).Elem()
 	rt := rv.Type()
 	for i := 0; i < rt.NumField(); i++ {
@@ -180,7 +216,8 @@ func setFormValue(rv reflect.Value, vs []string) error {
 			return fmt.Errorf("invalid bool: %q", vs[0])
 		}
 	default:
-		return json.Unmarshal([]byte(vs[0]), rv.Addr().Interface())
+		return json.Unmarshal([]byte(vs[0]), rv.Addr().Interface(),
+			json.MatchCaseInsensitiveNames(true))
 	}
 	return nil
 }
