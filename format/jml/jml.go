@@ -34,6 +34,8 @@ type JML struct{ V any }
 
 const digits = "0123456789"
 
+var multilineStringEsc = strings.NewReplacer("\n", "\\n", `"`, `\"`).Replace
+
 func (j *JML) MarshalText() ([]byte, error) { return Marshal(j.V) }
 
 func Unmarshal(jml []byte, v interface{}) error {
@@ -238,7 +240,8 @@ func (j *jmlLexer) lexMultiLineString() lexFn {
 			break
 		}
 	}
-	v := `"` + strings.ReplaceAll(strings.Join(lines, "\n"), "\n", "\\n") + `"`
+
+	v := `"` + multilineStringEsc(strings.Join(lines, "\n")) + `"`
 	return j.emit("string", v, j.lexSpace)
 }
 
