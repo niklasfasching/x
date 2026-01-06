@@ -2,6 +2,7 @@ package container
 
 import (
 	"bufio"
+	"cmp"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -26,8 +27,9 @@ type Builder struct {
 }
 
 type File struct {
-	BaseID, Base, Exec string
-	Layers             []CMD
+	BaseID, Base, Exec, CtxDir string
+	Layers                     []CMD
+	Exposes                    []string
 }
 
 type CMD struct {
@@ -38,13 +40,14 @@ type CMD struct {
 
 var LayerInfoFile = ".layer.txt"
 
-func (b *Builder) Build(f *File, contextDir string) (err error) {
+func (b *Builder) Build(f *File, ctxDir string) (err error) {
+	ctxDir = cmp.Or(ctxDir, f.CtxDir)
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.Join(err, r.(error))
 		}
 	}()
-	try(os.Chdir(contextDir), "chdir")
+	try(os.Chdir(ctxDir), "chdir")
 	baseDir := filepath.Join(b.LayersDir, f.BaseID)
 	log.Printf("=== FROM %s (0/%d)\n\t%s", f.Base, len(f.Layers), f.BaseID)
 	changed, err := b.Registry.Pull(f.Base, baseDir)
@@ -58,9 +61,9 @@ func (b *Builder) Build(f *File, contextDir string) (err error) {
 		try(os.MkdirAll(layerDir, 0755), "mkdir layerDir")
 		switch c.K {
 		case "COPY":
-			changed = b.Copy(c, contextDir, layerDir) || changed
+			changed = b.Copy(c, ctxDir, layerDir) || changed
 		case "RUN":
-			changed = b.run(c, contextDir, layerDir, lowerDirs, changed) || changed
+			changed = b.run(c, ctxDir, layerDir, lowerDirs, changed) || changed
 		default:
 			return fmt.Errorf("unsupported cmd: %v", c)
 		}
@@ -144,10 +147,10 @@ func (b *Builder) FinalizeSysExtDir(layerDir string) {
 	try(os.WriteFile(extFile, []byte("ID=_any"), 0644), "write extFile")
 }
 
-func (b *Builder) Prune(excludedDockerfiles ...string) error {
+func (b *Builder) Prune(excludedDockerfiles [][2]string) error {
 	m := map[string]bool{}
-	for _, path := range excludedDockerfiles {
-		d, err := Parse(path)
+	for _, x := range excludedDockerfiles {
+		d, err := Parse(x[0], x[1])
 		if err != nil {
 			return err
 		}
@@ -171,17 +174,35 @@ func (b *Builder) Prune(excludedDockerfiles ...string) error {
 	return nil
 }
 
-func Parse(path string) (*File, error) {
-	path, err := filepath.Abs(path)
+func FileArgs(dockerfilePathOrContent, ctxDir string) [2]string {
+	if strings.Contains(dockerfilePathOrContent, "FROM ") {
+		return [2]string{dockerfilePathOrContent, ctxDir}
+	}
+	return [2]string{dockerfilePathOrContent, ctxDir}
+}
+
+func Parse(dockerfilePathOrContent, ctxDir string) (*File, error) {
+	content := dockerfilePathOrContent
+	if !strings.Contains(dockerfilePathOrContent, "FROM ") {
+		path := dockerfilePathOrContent
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(ctxDir, path)
+		}
+		bs, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		content = string(bs)
+	}
+	return ParseString(content, ctxDir)
+}
+
+func ParseString(content, ctxDir string) (*File, error) {
+	ctxDir, err := filepath.Abs(ctxDir)
 	if err != nil {
 		return nil, err
 	}
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	s, cs := bufio.NewScanner(f), []CMD{}
+	s, cs := bufio.NewScanner(strings.NewReader(content)), []CMD{}
 	for v := ""; s.Scan(); {
 		if l := strings.TrimSpace(s.Text()); l == "" || strings.HasPrefix(l, "#") {
 			continue
@@ -198,7 +219,8 @@ func Parse(path string) (*File, error) {
 		return nil, fmt.Errorf("must start with FROM %v", cs)
 	}
 	base := strings.TrimSpace(strings.SplitN(cs[0].V, "#", 2)[0])
-	d, workDir, env, mnts := &File{BaseID: hash(base), Base: base}, "/", []string{}, []string{}
+	d := &File{BaseID: hash(base), Base: base, CtxDir: cmp.Or(ctxDir, ".")}
+	workDir, env, mnts := "/", []string{}, []string{}
 	for i, c := range cs[1:] {
 		switch c.K {
 		case "CMD":
@@ -209,8 +231,10 @@ func Parse(path string) (*File, error) {
 			env = append(env, c.V)
 		case "VOLUME":
 			mnts = append(mnts, c.V)
+		case "EXPOSE":
+			d.Exposes = append(d.Exposes, c.V)
 		case "RUN", "COPY":
-			c.ID = hash(path, d.Base, fmt.Sprint(i), fmt.Sprint(c))
+			c.ID = hash(d.CtxDir, d.Base, fmt.Sprint(i), fmt.Sprint(c))
 			c.WorkDir, c.Env, c.Mounts = workDir, slices.Clone(env), slices.Clone(mnts)
 			d.Layers = append(d.Layers, c)
 		default:

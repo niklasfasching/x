@@ -16,17 +16,24 @@ import (
 )
 
 type Registry struct {
+	*http.Client
 	TTL                                  time.Duration
 	APIBaseURL, AuthBaseURL, AuthService string
 }
 
 type Layer struct{ MediaType, Digest string }
 
-var DockerRegistry = Registry{
-	TTL:         -1,
-	APIBaseURL:  "https://registry-1.docker.io",
-	AuthBaseURL: "https://auth.docker.io",
-	AuthService: "registry.docker.io",
+func NewDockerRegistry(c *http.Client) Registry {
+	if c == nil {
+		c = http.DefaultClient
+	}
+	return Registry{
+		Client:      c,
+		TTL:         -1,
+		APIBaseURL:  "https://registry-1.docker.io",
+		AuthBaseURL: "https://auth.docker.io",
+		AuthService: "registry.docker.io",
+	}
 }
 
 func (r *Registry) Pull(image, dir string) (bool, error) {
@@ -201,7 +208,7 @@ func (r *Registry) Get(url, accept, token string) (io.ReadCloser, error) {
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
-	res, err := http.DefaultClient.Do(req)
+	res, err := r.Do(req)
 	if err != nil {
 		return nil, err
 	} else if res.StatusCode >= 300 {

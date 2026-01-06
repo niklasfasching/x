@@ -16,6 +16,7 @@ import (
 )
 
 var EnvKey = "RE_EXEC_NAMESPACED"
+var Exe = "/proc/self/exe"
 
 func RunInChroot(lowerDir, upperDir, workDir string, f func(), bindPaths ...string) (err error) {
 	defer func() {
@@ -69,6 +70,19 @@ func RunInChroot(lowerDir, upperDir, workDir string, f func(), bindPaths ...stri
 }
 
 func ReExecNamespaced(v string) (string, error) {
+	return ExecNamespaced(append([]string{Exe}, os.Args[1:]...), v)
+}
+
+func ReExecTestNamespaced(testName string) (bool, error) {
+	args := []string{Exe, fmt.Sprintf("-test.run=^%s$", testName)}
+	if slices.Contains(os.Args, "-test.v=true") {
+		args = append(args, "-test.v=true")
+	}
+	v, err := ExecNamespaced(args, "1")
+	return v != "1", err
+}
+
+func ExecNamespaced(args []string, v string) (string, error) {
 	if v := os.Getenv(EnvKey); v != "" {
 		return v, AwaitIDMapping()
 	}
@@ -77,8 +91,8 @@ func ReExecNamespaced(v string) (string, error) {
 		allCaps = append(allCaps, uintptr(i))
 	}
 	c := exec.Cmd{
-		Path:   "/proc/self/exe",
-		Args:   os.Args,
+		Path:   args[0],
+		Args:   args,
 		Env:    append(os.Environ(), fmt.Sprintf("RE_EXEC_NAMESPACED=%s", v)),
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
