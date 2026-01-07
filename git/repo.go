@@ -252,7 +252,7 @@ func (r *Remote) Push(ref string, c *Commit, packData []byte) error {
 }
 
 func (r *Remote) ListRemote() (map[string]string, error) {
-	stdin, stdout, err := r.Exec("git-upload-pack " + r.Repo)
+	stdin, stdout, err := r.Exec("git-receive-pack " + r.Repo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
