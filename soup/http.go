@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -103,7 +102,7 @@ func (c *FileCache) Key(req *http.Request) (string, error) {
 			return "", err
 		}
 		req.Body.Close()
-		req.Body = ioutil.NopCloser(bytes.NewBuffer(bs))
+		req.Body = io.NopCloser(bytes.NewBuffer(bs))
 		hash.Write(bs)
 	}
 	return filepath.Join(c.Root, key+hex.EncodeToString(hash.Sum(nil))), nil

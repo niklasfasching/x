@@ -86,7 +86,10 @@ export class Extractor {
       const area = number(el.width * el.height,
                           el.offsetHeight * el.offsetWidth,
                           el.clientHeight * el.clientWidth) / windowArea
-      const tagScore = el.closest("main, article, section") ? 1 : el.closest("footer, header, nav, aside") ? -1 : 0
+      const tagScore = el.closest("#comments") ? -1 :
+            el.closest("main, article, section") ? 1 :
+            el.closest("footer, header, nav, aside") ? -1 : 0;
+
       const longCount = el._ && el._.pCount > 3 ? 1 : 0;
       const shortCount = !el._ || (el._.textLen || 0) < 10 ? 1 : 0;
       const isInAction = !el.closest(actionSelector);

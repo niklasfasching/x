@@ -68,11 +68,7 @@ func load(url string) (*soup.Node, error) {
 		RetryCount: 5,
 		Cache:      &soup.FileCache{Root: "testdata/http"},
 	}
-	c, err := t.Client()
-	if err != nil {
-		return nil, err
-	}
-	return soup.Load(c, url)
+	return soup.Load(t.Client(), url)
 }
 
 func format(t *testing.T, html string) string {
