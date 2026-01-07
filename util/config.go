@@ -12,7 +12,9 @@ func LoadConfig(c any) error {
 	for i := 0; i < rt.NumField(); i++ {
 		rft := rt.Field(i)
 		s, ok := os.LookupEnv(rft.Name)
-		if !ok {
+		if !ok && !rc.Field(i).IsZero() {
+			continue
+		} else if !ok {
 			return fmt.Errorf("failed to lookup field %q in env", rft.Name)
 		}
 		if rft.Type.Kind() == reflect.String {
