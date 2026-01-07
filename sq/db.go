@@ -67,8 +67,8 @@ func New(uri string, migrations []string, fs map[string]any, ffw bool) (*DB, err
 	return New(uri, migrations, fs, false)
 }
 
-func NewTable[T any](db *DB, name, idCol string) (*Table[T], error) {
-	return &Table[T]{name, normalizedCol(idCol), db}, nil
+func NewTable[T any](db *DB, name, idCol string) *Table[T] {
+	return &Table[T]{name, normalizedCol(idCol), db}
 }
 
 func (t *Table[T]) Count(conds string, args ...any) (int, error) {
@@ -130,6 +130,9 @@ func (db *DB) connectHook(c *sqlite3.SQLiteConn) error {
 }
 
 func (db *DB) migrate(migrations []string) error {
+	if migrations == nil {
+		return nil
+	}
 	tx, err := db.Begin()
 	if err != nil {
 		return err

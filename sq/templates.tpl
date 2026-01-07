@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS {{ $t.name }}s (
   {{- end }}
   {{- if $t.rest }}, {{ $t.rest }} {{ end -}}
 );
+{{ .raw }}
 {{ end }}
 
 
