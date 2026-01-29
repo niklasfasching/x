@@ -17,7 +17,6 @@ func TestSchemaJSON(t *testing.T) {
 	t.Run("Query and Insert JSON values (map/struct)", func(t *testing.T) {
 		t.Skipf("TODO")
 	})
-
 }
 
 func TestSchemaAutoTimestamp(t *testing.T) {
@@ -91,6 +90,62 @@ func update[T any](t *testing.T, db *DB, table, idK string, idV any, kvs map[str
 	return v
 }
 
+func TestFFW(t *testing.T) {
+	tmp := t.TempDir()
+	m1 := []string{"CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)"}
+	m2 := []string{"CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT, desc TEXT)"}
+	m3 := []string{"CREATE TABLE items (id INTEGER PRIMARY KEY, desc TEXT)"}
+
+	t.Run("ffw=0 blocks rebuild", func(t *testing.T) {
+		db, _ := New(tmp+"/0.db", m1, nil, 0)
+		if _, _, err := Exec(db, "INSERT INTO items (name) VALUES (?)", "test"); err != nil {
+			t.Fatal(err)
+		}
+		db.Close()
+		if _, err := New(tmp+"/0.db", m2, nil, 0); err != MigrateErr {
+			t.Fatalf("expected MigrateErr, got %v", err)
+		}
+	})
+
+	t.Run("ffw=1 allows additive", func(t *testing.T) {
+		db, _ := New(tmp+"/1.db", m1, nil, 1)
+		Exec(db, "INSERT INTO items (name) VALUES (?)", "test")
+		db.Close()
+		db, err := New(tmp+"/1.db", m2, nil, 1)
+		if err != nil {
+			t.Fatalf("expected success, got %v", err)
+		}
+		rows, _ := QueryMap[any](db, "SELECT * FROM items")
+		if len(rows) != 1 || rows[0]["name"] != "test" {
+			t.Fatalf("expected data preserved: %v", rows)
+		}
+		db.Close()
+	})
+
+	t.Run("ffw=1 blocks drops", func(t *testing.T) {
+		db, _ := New(tmp+"/1b.db", m2, nil, 1)
+		db.Close()
+		if _, err := New(tmp+"/1b.db", m3, nil, 1); err == nil || err == MigrateErr {
+			t.Fatalf("expected forward-only error, got %v", err)
+		}
+	})
+
+	t.Run("ffw=2 allows drops", func(t *testing.T) {
+		db, _ := New(tmp+"/2.db", m2, nil, 2)
+		Exec(db, "INSERT INTO items (name, desc) VALUES (?, ?)", "test", "foo")
+		db.Close()
+		db, err := New(tmp+"/2.db", m3, nil, 2)
+		if err != nil {
+			t.Fatalf("expected success, got %v", err)
+		}
+		rows, _ := QueryMap[any](db, "SELECT * FROM items")
+		if len(rows) != 1 || rows[0]["desc"] != "foo" {
+			t.Fatalf("expected desc preserved, name dropped: %v", rows)
+		}
+		db.Close()
+	})
+}
+
 func newDB[T any](t *testing.T, v T) *DB {
 	t.Helper()
 	f, err := os.CreateTemp("", "test.db")
@@ -104,7 +159,7 @@ func newDB[T any](t *testing.T, v T) *DB {
 		Schema(v),
 		``,
 		FTSIndex(fmt.Sprintf("%s_fts", name), tableName, "id", "porter", "name"),
-	}, nil, false)
+	}, nil, 0)
 	if err != nil {
 		t.Fatalf("failed to open db: %v", err)
 	}

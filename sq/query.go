@@ -1,6 +1,7 @@
 package sq
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -11,7 +12,11 @@ var ErrNoResults = fmt.Errorf("empty results")
 var ErrAbortScan = fmt.Errorf("early exit scan")
 
 func Insert(c Connection, or, table string, kvs map[string]any) (int64, error) {
-	id, _, err := Exec(c, "INSERT "+or+` INTO {'table} {values "kvs"}`, Args{
+	return InsertContext(context.Background(), c, or, table, kvs)
+}
+
+func InsertContext(ctx context.Context, c Connection, or, table string, kvs map[string]any) (int64, error) {
+	id, _, err := ExecContext(ctx, c, "INSERT "+or+` INTO {'table} {values "kvs"}`, Args{
 		"table": table,
 		"kvs":   kvs,
 	})
@@ -19,11 +24,15 @@ func Insert(c Connection, or, table string, kvs map[string]any) (int64, error) {
 }
 
 func Exec(c Connection, q string, args ...any) (id, count int64, err error) {
+	return ExecContext(context.Background(), c, q, args...)
+}
+
+func ExecContext(ctx context.Context, c Connection, q string, args ...any) (id, count int64, err error) {
 	q, args, err = maybeRenderQuery(q, args)
 	if err != nil {
 		return 0, 0, err
 	}
-	result, err := c.Exec(q, args...)
+	result, err := c.ExecContext(ctx, q, args...)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -33,7 +42,11 @@ func Exec(c Connection, q string, args ...any) (id, count int64, err error) {
 }
 
 func Update(c Connection, table, k string, v any, kvs map[string]any) error {
-	_, n, err := Exec(c, `UPDATE {'table} SET {set "kvs"} WHERE {'k} = {$v}`, Args{
+	return UpdateContext(context.Background(), c, table, k, v, kvs)
+}
+
+func UpdateContext(ctx context.Context, c Connection, table, k string, v any, kvs map[string]any) error {
+	_, n, err := ExecContext(ctx, c, `UPDATE {'table} SET {set "kvs"} WHERE {'k} = {$v}`, Args{
 		"table": table, "kvs": kvs, "k": k, "v": v,
 	})
 	if n != 1 {
@@ -43,13 +56,17 @@ func Update(c Connection, table, k string, v any, kvs map[string]any) error {
 }
 
 func Query[T any](c Connection, q string, args ...any) (vs []T, err error) {
+	return QueryContext[T](context.Background(), c, q, args...)
+}
+
+func QueryContext[T any](ctx context.Context, c Connection, q string, args ...any) (vs []T, err error) {
 	if reflect.TypeOf(*new(T)).Kind() == reflect.Struct {
-		err = queryRows(c, q, func(v T) error {
+		err = QueryRowsContext(ctx, c, q, func(v T) error {
 			vs = append(vs, v)
 			return nil
 		}, args...)
 	} else {
-		err = queryValRows(c, q, func(v T) error {
+		err = QueryValRowsContext(ctx, c, q, func(v T) error {
 			vs = append(vs, v)
 			return nil
 		}, args...)
@@ -58,7 +75,11 @@ func Query[T any](c Connection, q string, args ...any) (vs []T, err error) {
 }
 
 func QueryMap[T any](c Connection, q string, args ...any) (vs []map[string]T, err error) {
-	err = queryMapRows(c, q, func(v map[string]T) error {
+	return QueryMapContext[T](context.Background(), c, q, args...)
+}
+
+func QueryMapContext[T any](ctx context.Context, c Connection, q string, args ...any) (vs []map[string]T, err error) {
+	err = QueryMapRowsContext(ctx, c, q, func(v map[string]T) error {
 		vs = append(vs, v)
 		return nil
 	}, args...)
@@ -66,14 +87,18 @@ func QueryMap[T any](c Connection, q string, args ...any) (vs []map[string]T, er
 }
 
 func QueryOne[T any](c Connection, q string, args ...any) (v T, err error) {
+	return QueryOneContext[T](context.Background(), c, q, args...)
+}
+
+func QueryOneContext[T any](ctx context.Context, c Connection, q string, args ...any) (v T, err error) {
 	noResultsErr := ErrNoResults
 	if reflect.TypeOf(*new(T)).Kind() == reflect.Struct {
-		err = queryRows(c, q, func(_v T) error {
+		err = QueryRowsContext(ctx, c, q, func(_v T) error {
 			v, noResultsErr = _v, nil
 			return ErrAbortScan
 		}, args...)
 	} else {
-		err = queryValRows(c, q, func(_v T) error {
+		err = QueryValRowsContext(ctx, c, q, func(_v T) error {
 			v, noResultsErr = _v, nil
 			return ErrAbortScan
 		}, args...)
@@ -85,8 +110,12 @@ func QueryOne[T any](c Connection, q string, args ...any) (v T, err error) {
 }
 
 func QueryOneMap[T any](c Connection, q string, args ...any) (v map[string]T, err error) {
+	return QueryOneMapContext[T](context.Background(), c, q, args...)
+}
+
+func QueryOneMapContext[T any](ctx context.Context, c Connection, q string, args ...any) (v map[string]T, err error) {
 	noResultsErr := ErrNoResults
-	err = queryMapRows(c, q, func(_v map[string]T) error {
+	err = QueryMapRowsContext(ctx, c, q, func(_v map[string]T) error {
 		v, noResultsErr = _v, nil
 		return ErrAbortScan
 	}, args...)
@@ -97,15 +126,23 @@ func QueryOneMap[T any](c Connection, q string, args ...any) (v map[string]T, er
 }
 
 func Each[T any](c Connection, q string, f func(T) error, args ...any) error {
+	return EachContext(context.Background(), c, q, f, args...)
+}
+
+func EachContext[T any](ctx context.Context, c Connection, q string, f func(T) error, args ...any) error {
 	if reflect.TypeOf(*new(T)).Kind() == reflect.Struct {
-		return queryRows(c, q, f, args...)
+		return QueryRowsContext(ctx, c, q, f, args...)
 	} else {
-		return queryValRows(c, q, f, args...)
+		return QueryValRowsContext(ctx, c, q, f, args...)
 	}
 }
 
 func EachMap[T any](c Connection, q string, f func(map[string]T) error, args ...any) error {
-	return queryMapRows(c, q, f, args...)
+	return EachMapContext(context.Background(), c, q, f, args...)
+}
+
+func EachMapContext[T any](ctx context.Context, c Connection, q string, f func(map[string]T) error, args ...any) error {
+	return QueryMapRowsContext(ctx, c, q, f, args...)
 }
 
 func Scan[T any](rows *sql.Rows, f func(T) error) error {
@@ -236,36 +273,48 @@ func ScanVal[T any](rows *sql.Rows, f func(T) error) error {
 	return rows.Err()
 }
 
-func queryRows[T any](c Connection, q string, f func(T) error, args ...any) error {
+func QueryRows[T any](c Connection, q string, f func(T) error, args ...any) error {
+	return QueryRowsContext(context.Background(), c, q, f, args...)
+}
+
+func QueryRowsContext[T any](ctx context.Context, c Connection, q string, f func(T) error, args ...any) error {
 	q, args, err := maybeRenderQuery(q, args)
 	if err != nil {
 		return fmt.Errorf("failed to render query: %w", err)
 	}
-	rows, err := c.Query(q, args...)
+	rows, err := c.QueryContext(ctx, q, args...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %w", err)
 	}
 	return Scan(rows, f)
 }
 
-func queryMapRows[T any](c Connection, q string, f func(map[string]T) error, args ...any) error {
+func QueryMapRows[T any](c Connection, q string, f func(map[string]T) error, args ...any) error {
+	return QueryMapRowsContext(context.Background(), c, q, f, args...)
+}
+
+func QueryMapRowsContext[T any](ctx context.Context, c Connection, q string, f func(map[string]T) error, args ...any) error {
 	q, args, err := maybeRenderQuery(q, args)
 	if err != nil {
 		return fmt.Errorf("failed to render query: %w", err)
 	}
-	rows, err := c.Query(q, args...)
+	rows, err := c.QueryContext(ctx, q, args...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %w", err)
 	}
 	return ScanMap(rows, f)
 }
 
-func queryValRows[T any](c Connection, q string, f func(T) error, args ...any) error {
+func QueryValRows[T any](c Connection, q string, f func(T) error, args ...any) error {
+	return QueryValRowsContext(context.Background(), c, q, f, args...)
+}
+
+func QueryValRowsContext[T any](ctx context.Context, c Connection, q string, f func(T) error, args ...any) error {
 	q, args, err := maybeRenderQuery(q, args)
 	if err != nil {
 		return fmt.Errorf("failed to render query: %w", err)
 	}
-	rows, err := c.Query(q, args...)
+	rows, err := c.QueryContext(ctx, q, args...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %w", err)
 	}

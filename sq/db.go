@@ -4,6 +4,7 @@
 package sq
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -11,19 +12,20 @@ import (
 	"maps"
 	"os"
 	"reflect"
+	"slices"
 	"strings"
 
 	sqlite3 "github.com/mattn/go-sqlite3"
 )
 
 type Connection interface {
-	Query(query string, args ...any) (*sql.Rows, error)
-	Exec(query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
 
 type DB struct {
-	funcs map[string]any
 	*sql.DB
+	ConnectHook func(c *sqlite3.SQLiteConn) error
 }
 
 type Table[T any] struct {
@@ -31,19 +33,25 @@ type Table[T any] struct {
 	*DB
 }
 
-func New(uri string, migrations []string, fs map[string]any, ffw bool) (*DB, error) {
-	d := &DB{funcs: map[string]any{}}
-	maps.Copy(d.funcs, defaultFuncs)
-	maps.Copy(d.funcs, fs)
-	driver := fmt.Sprintf("sqlite3-%d", driverIndex)
-	driverIndex++
-	sql.Register(driver, &sqlite3.SQLiteDriver{ConnectHook: d.connectHook})
+func New(uri string, migrations []string, f func(c *sqlite3.SQLiteConn) error, ffw int) (*DB, error) {
+	d, driver := &DB{}, "sqlite3"
+	if f != nil {
+		driver = fmt.Sprintf("sqlite3-%d", driverIndex)
+		driverIndex++
+		sql.Register(driver, &sqlite3.SQLiteDriver{ConnectHook: f})
+	}
 	db, err := sql.Open(driver, uri)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open: %w", err)
 	}
 	d.DB = db
-	if err := d.migrate(migrations); !ffw || err != MigrateErr {
+	ctx := context.Background()
+	err = d.MigrateContext(ctx, migrations)
+	if ffw == 0 {
+		return d, err
+	}
+	mErr := &MigrateError{}
+	if !errors.As(err, &mErr) || mErr.Reason != "rebuild" {
 		return d, err
 	}
 	log.Println("FFW migrating to new schema...")
@@ -53,18 +61,36 @@ func New(uri string, migrations []string, fs map[string]any, ffw bool) (*DB, err
 	if len(parts) > 1 {
 		newURI = newName + "?" + parts[1]
 	}
-	newDB, err := New(newURI, migrations, fs, false)
+	newDB, err := New(newURI, migrations, f, 0)
 	if err != nil {
 		return nil, err
 	}
 	defer os.Remove(newName)
 	defer newDB.Close()
-	if err := Copy(oldName, d, newDB); err != nil {
+	if err := CopyContext(ctx, oldName, d, newDB, ffw == 1); err != nil {
 		return nil, err
 	} else if err := errors.Join(db.Close(), newDB.Close(), os.Rename(newName, oldName)); err != nil {
 		return nil, err
 	}
-	return New(uri, migrations, fs, false)
+	return New(uri, migrations, f, 0)
+}
+
+func FuncHook(fs map[string]any) func(c *sqlite3.SQLiteConn) error {
+	all := map[string]any{}
+	maps.Copy(all, defaultFuncs)
+	maps.Copy(all, fs)
+	return func(c *sqlite3.SQLiteConn) error {
+		for name, f := range all {
+			v, isPure := f.(PureFunc)
+			if isPure {
+				f = v.F
+			}
+			if err := c.RegisterFunc(name, f, isPure); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 }
 
 func NewTable[T any](db *DB, name, idCol string) *Table[T] {
@@ -72,20 +98,32 @@ func NewTable[T any](db *DB, name, idCol string) *Table[T] {
 }
 
 func (t *Table[T]) Count(conds string, args ...any) (int, error) {
-	n, err := QueryOne[int](t.DB, "SELECT count(1) FROM `"+t.name+"` WHERE "+conds, args...)
+	return t.CountContext(context.Background(), conds, args...)
+}
+
+func (t *Table[T]) CountContext(ctx context.Context, conds string, args ...any) (int, error) {
+	n, err := QueryOneContext[int](ctx, t.DB, "SELECT count(1) FROM `"+t.name+"` WHERE "+conds, args...)
 	return n, err
 }
 
 func (t *Table[T]) Insert(or string, v T) (int64, error) {
+	return t.InsertContext(context.Background(), or, v)
+}
+
+func (t *Table[T]) InsertContext(ctx context.Context, or string, v T) (int64, error) {
 	idK, idV, kvs := RowMap(v)
 	if rv := reflect.ValueOf(idV); !rv.IsZero() {
 		kvs[idK] = idV
 	}
-	return Insert(t.DB, or, t.name, kvs)
+	return InsertContext(ctx, t.DB, or, t.name, kvs)
 }
 
 func (t *Table[T]) Modify(id any, f func(*T) error, ks ...string) error {
-	v, err := QueryOne[T](t.DB, `SELECT {cols "cols"} FROM {'table} WHERE {'k} = {$v}`, Args{
+	return t.ModifyContext(context.Background(), id, f, ks...)
+}
+
+func (t *Table[T]) ModifyContext(ctx context.Context, id any, f func(*T) error, ks ...string) error {
+	v, err := QueryOneContext[T](ctx, t.DB, `SELECT {cols "cols"} FROM {'table} WHERE {'k} = {$v}`, Args{
 		"k": t.idCol, "v": id, "table": t.name, "cols": append(ks, t.idCol),
 	})
 	if err != nil {
@@ -93,16 +131,20 @@ func (t *Table[T]) Modify(id any, f func(*T) error, ks ...string) error {
 	} else if err := f(&v); err != nil {
 		return err
 	}
-	return t.Update(v, ks...)
+	return t.UpdateContext(ctx, v, ks...)
 }
 
 func (t *Table[T]) Update(v T, ks ...string) error {
-	if len(ks) == 0 {
-		return fmt.Errorf("update w/o keys")
-	}
+	return t.UpdateContext(context.Background(), v, ks...)
+}
+
+func (t *Table[T]) UpdateContext(ctx context.Context, v T, ks ...string) error {
 	idK, idV, kvs := RowMap(v)
 	if rv := reflect.ValueOf(idV); rv.IsZero() {
 		return fmt.Errorf("update requires non-empty %q: %#v", idK, v)
+	}
+	if len(ks) == 0 {
+		ks = slices.Collect(maps.Keys(kvs))
 	}
 	nkvs := map[string]any{}
 	for _, k := range ks {
@@ -113,23 +155,14 @@ func (t *Table[T]) Update(v T, ks ...string) error {
 		}
 	}
 	kvs = nkvs
-	return Update(t.DB, t.name, idK, idV, kvs)
+	return UpdateContext(ctx, t.DB, t.name, idK, idV, kvs)
 }
 
-func (db *DB) connectHook(c *sqlite3.SQLiteConn) error {
-	for name, f := range db.funcs {
-		v, isPure := f.(PureFunc)
-		if isPure {
-			f = v.F
-		}
-		if err := c.RegisterFunc(name, f, isPure); err != nil {
-			return err
-		}
-	}
-	return nil
+func (db *DB) Migrate(migrations []string) error {
+	return db.MigrateContext(context.Background(), migrations)
 }
 
-func (db *DB) migrate(migrations []string) error {
+func (db *DB) MigrateContext(ctx context.Context, migrations []string) error {
 	if migrations == nil {
 		return nil
 	}
@@ -138,11 +171,11 @@ func (db *DB) migrate(migrations []string) error {
 		return err
 	}
 	defer tx.Rollback()
-	_, err = tx.Exec(`CREATE TABLE IF NOT EXISTS _migrations (sql TEXT)`)
+	_, _, err = ExecContext(ctx, tx, `CREATE TABLE IF NOT EXISTS _migrations (sql TEXT)`)
 	if err != nil {
 		return fmt.Errorf("failed to create _migrations table: %w", err)
 	}
-	appliedMigrations, err := QueryMap[string](tx, "SELECT sql FROM _migrations")
+	appliedMigrations, err := QueryMapContext[string](ctx, tx, "SELECT sql FROM _migrations")
 	if err != nil {
 		return fmt.Errorf("failed to query _migrations: %w", err)
 	}
@@ -154,14 +187,14 @@ func (db *DB) migrate(migrations []string) error {
 	}
 	if !rebuild || len(appliedMigrations) == 0 {
 		for _, stmt := range migrations[len(appliedMigrations):] {
-			if _, err := tx.Exec(stmt); err != nil {
+			if _, _, err := ExecContext(ctx, tx, stmt); err != nil {
 				return fmt.Errorf("failed to apply migration %q: %w", stmt, err)
 			}
-			if _, err := tx.Exec("INSERT INTO _migrations (sql) VALUES (?)", stmt); err != nil {
+			if _, _, err := ExecContext(ctx, tx, "INSERT INTO _migrations (sql) VALUES (?)", stmt); err != nil {
 				return fmt.Errorf("failed to record migration %q: %w", stmt, err)
 			}
 		}
 		return tx.Commit()
 	}
-	return MigrateErr
+	return &MigrateError{Reason: "rebuild"}
 }

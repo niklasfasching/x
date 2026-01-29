@@ -1,6 +1,7 @@
 package sq
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -13,7 +14,7 @@ type KV[K comparable, V any] struct {
 }
 
 func NewKV[K comparable, V any](db *DB, table string) (*KV[K, V], error) {
-	if _, err := db.Exec(KVSchema(table)); err != nil {
+	if _, err := db.ExecContext(context.Background(), KVSchema(table)); err != nil {
 		return nil, fmt.Errorf("failed to create kv table: %w", err)
 	}
 	sQ, err := db.Prepare(fmt.Sprintf("SELECT v FROM `%s` WHERE _k_ = ? LIMIT 1", table))
@@ -32,7 +33,7 @@ func KVSchema(table string) string {
 }
 
 func (kv *KV[K, V]) Get(k K) (v V, err error) {
-	rows, err := kv.query.Query(k)
+	rows, err := kv.query.QueryContext(context.Background(), k)
 	if err != nil {
 		return v, fmt.Errorf("failed to execute query: %w", err)
 	}
@@ -56,10 +57,10 @@ func (kv *KV[K, V]) Get(k K) (v V, err error) {
 
 func (kv *KV[K, V]) Set(k K, v V) error {
 	if kv.isStruct {
-		_, err := kv.insert.Exec(k, &JSON{v})
+		_, err := kv.insert.ExecContext(context.Background(), k, &JSON{v})
 		return err
 	} else {
-		_, err := kv.insert.Exec(k, v)
+		_, err := kv.insert.ExecContext(context.Background(), k, v)
 		return err
 	}
 }

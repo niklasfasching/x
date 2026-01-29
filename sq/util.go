@@ -1,6 +1,7 @@
 package sq
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	_ "embed"
@@ -22,7 +23,11 @@ type Args map[string]any
 type JSON struct{ V any }
 type PureFunc struct{ F any }
 
-var MigrateErr = fmt.Errorf("schema needs to be rebuilt")
+type MigrateError struct {
+	Reason    string
+	Details   string
+	OldTables map[string][]string
+}
 
 //go:embed templates.tpl
 var templatesString string
@@ -89,7 +94,7 @@ func Schema(v any, rest ...string) string {
 
 func RowMap[T any](v T) (string, any, map[string]any) {
 	rv, t := reflect.ValueOf(v), reflect.TypeOf(v)
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		rv, t = rv.Elem(), t.Elem()
 	}
 	kvs, idK, idV := make(map[string]any, t.NumField()), "", any(nil)
@@ -97,7 +102,7 @@ func RowMap[T any](v T) (string, any, map[string]any) {
 		f, v := t.Field(i), rv.Field(i).Interface()
 		if sq := f.Tag.Get("sq"); strings.Contains(sq, " AS (") {
 			continue
-		} else if k := f.Name; k == "ID" || k == "RowID" {
+		} else if k := f.Name; k == "ID" || k == "RowID" || strings.Contains(sq, "PRIMARY KEY") {
 			idK, idV = k, v
 		} else if jsonDefault(f.Type) != "" {
 			kvs[k] = &JSON{v}
@@ -112,7 +117,7 @@ func Tables(c Connection, caseInsensitive bool) (map[string][]string, error) {
 	sql := `SELECT name, (SELECT group_concat(name) FROM pragma_table_info(tl.name)) as columns
             FROM pragma_table_list tl
             WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != '_migrations'`
-	ts, err := QueryMap[string](c, sql)
+	ts, err := QueryMapContext[string](context.Background(), c, sql)
 	m := map[string][]string{}
 	for _, t := range ts {
 		if !caseInsensitive {
@@ -125,11 +130,15 @@ func Tables(c Connection, caseInsensitive bool) (map[string][]string, error) {
 }
 
 func Copy(name string, oldDB, newDB *DB) error {
+	return CopyContext(context.Background(), name, oldDB, newDB, false)
+}
+
+func CopyContext(ctx context.Context, name string, oldDB, newDB *DB, requireForwardOnly bool) error {
 	oldTables, err := Tables(oldDB, true)
 	if err != nil {
 		return fmt.Errorf("failed to list tables to rebuild: %w", err)
 	}
-	if _, err := oldDB.Exec("PRAGMA journal_mode=delete"); err != nil {
+	if _, _, err := ExecContext(ctx, oldDB, "PRAGMA journal_mode=delete"); err != nil {
 		return fmt.Errorf("failed to ensure default journal mode: %w", err)
 	}
 	if err := oldDB.Close(); err != nil {
@@ -144,7 +153,29 @@ func Copy(name string, oldDB, newDB *DB) error {
 	if err != nil {
 		return fmt.Errorf("failed to list tables to rebuild: %w", err)
 	}
-	if _, err := newTX.Exec(fmt.Sprintf("ATTACH DATABASE '%s' AS old", name)); err != nil {
+	if requireForwardOnly {
+		dropped := []string{}
+		for table := range oldTables {
+			if _, ok := newTables[table]; !ok {
+				dropped = append(dropped, fmt.Sprintf("table %q", table))
+			}
+		}
+		for table, oldCols := range oldTables {
+			for _, col := range oldCols {
+				if !slices.Contains(newTables[table], col) {
+					dropped = append(dropped, fmt.Sprintf("column %q.%q", table, col))
+				}
+			}
+		}
+		if len(dropped) > 0 {
+			return &MigrateError{
+				Reason:    "forward_only",
+				Details:   fmt.Sprintf("Would drop: %s", strings.Join(dropped, ", ")),
+				OldTables: oldTables,
+			}
+		}
+	}
+	if _, _, err := ExecContext(ctx, newTX, fmt.Sprintf("ATTACH DATABASE '%s' AS old", name)); err != nil {
 		return fmt.Errorf("failed to attach existing db: %w", err)
 	}
 	for name, oldCols := range oldTables {
@@ -160,7 +191,7 @@ func Copy(name string, oldDB, newDB *DB) error {
 		}
 		sql := fmt.Sprintf(`INSERT INTO %[1]s (%[2]s) SELECT %[2]s FROM old.%[1]s`,
 			name, strings.Join(cols, ","))
-		if _, err := newTX.Exec(sql); err != nil {
+		if _, _, err := ExecContext(ctx, newTX, sql); err != nil {
 			return fmt.Errorf("failed to copy data from table %q: %w", name, err)
 		}
 	}
@@ -276,6 +307,13 @@ func (v *JSON) Scan(src any) error {
 	default:
 		return fmt.Errorf("unsupported JSON scan %T => %T", src, v.V)
 	}
+}
+
+func (e *MigrateError) Error() string {
+	if e.Reason == "rebuild" {
+		return "schema needs to be rebuilt"
+	}
+	return "Schema Change Blocked: " + e.Details
 }
 
 func (v *JSON) Value() (driver.Value, error) {
