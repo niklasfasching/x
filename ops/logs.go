@@ -19,7 +19,12 @@ type L struct {
 	Lvl              slog.Level
 	Attrs            []slog.Attr
 	IndexedAttrs     []string
-	rs               []R
+	local            slog.Handler
+	*sink
+}
+
+type sink struct {
+	rs []R
 	sync.Mutex
 }
 
@@ -29,6 +34,13 @@ type R struct {
 }
 
 func (l *L) Handle(ctx context.Context, r slog.Record) error {
+	l.local.Handle(ctx, r)
+	if p, ok := ctx.Value(ctxKey{}).(traceMeta); ok {
+		r.AddAttrs(slog.String("traceID", p.TraceID))
+		if p.ParentID != "" {
+			r.AddAttrs(slog.String("spanID", p.ParentID))
+		}
+	}
 	attrs, iattrs := map[string]any{}, map[string]string{}
 	iattrs["lvl"] = r.Level.String()
 	fn := func(a slog.Attr) bool {
@@ -47,16 +59,25 @@ func (l *L) Handle(ctx context.Context, r slog.Record) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("[%s] %s\n", r.Level, string(line))
 	l.Lock()
 	l.rs = append(l.rs, R{fmt.Sprint(r.Time.UnixNano()), string(line), iattrs})
 	l.Unlock()
 	return nil
 }
 
-func (l *L) WithAttrs([]slog.Attr) slog.Handler               { panic("not implemented") }
+func (l *L) WithAttrs(as []slog.Attr) slog.Handler {
+	nl := *l
+	nl.Attrs, nl.local = slices.Concat(l.Attrs, as), l.local.WithAttrs(as)
+	return &nl
+}
+
 func (l *L) Enabled(ctx context.Context, lvl slog.Level) bool { return lvl >= l.Lvl }
-func (l *L) WithGroup(string) slog.Handler                    { panic("not implemented") }
+
+func (l *L) WithGroup(name string) slog.Handler {
+	nl := *l
+	nl.local = l.local.WithGroup(name)
+	return &nl
+}
 
 func (l *L) Flush(cl *http.Client) error {
 	if l.Host == "" {

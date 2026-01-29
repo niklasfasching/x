@@ -1,14 +1,15 @@
 package ops
 
 import (
+	"bufio"
 	"bytes"
 	"cmp"
 	"fmt"
+	"net"
 	"net/http"
 	"runtime/metrics"
 	"strings"
 	"sync"
-	"time"
 )
 
 type M struct {
@@ -26,31 +27,35 @@ type writer struct {
 
 var buckets = []int64{10, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 60000}
 
-func (m *M) WithMetrics(mux *http.ServeMux) http.Handler {
-	m.counts = map[string]int64{}
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		m.Lock()
-		m.active++
-		m.Unlock()
-		defer func() {
-			m.Lock()
-			m.active--
-			m.Unlock()
-		}()
-		t, ww := time.Now(), &writer{w, 200}
-		mux.ServeHTTP(ww, req)
-		d := time.Since(t).Milliseconds()
-		_, p := mux.Handler(req)
-		m.Track(d, "path=%s,method=%s,code=%d", m.Esc(p, "404"), req.Method, ww.code)
-	})
-}
-
 func (m *M) Gauge(k string, v float64) {
+	if m == nil {
+		return
+	}
 	m.Lock()
 	if m.gauges == nil {
 		m.gauges = map[string]float64{}
 	}
 	m.gauges[k] = v
+	m.Unlock()
+}
+
+func (m *M) AddActive(n int64) {
+	if m == nil {
+		return
+	}
+	m.Lock()
+	m.active += n
+	m.Unlock()
+}
+func (m *M) Counter(k string, v int64) {
+	if m == nil {
+		return
+	}
+	m.Lock()
+	if m.counts == nil {
+		m.counts = map[string]int64{}
+	}
+	m.counts[k] += v
 	m.Unlock()
 }
 
@@ -81,22 +86,27 @@ func (m *M) Flush(cl *http.Client) error {
 	return post(cl, m.Host+"/api/v1/push/influx/write", m.User, m.Pass, "text/plain", &b)
 }
 
-func (m *M) Track(ms int64, tmpl string, args ...any) {
+func (m *M) Hist(name string, v int64, tmpl string, args ...any) {
+	if m == nil {
+		return
+	}
 	tags := fmt.Sprintf(tmpl, args...)
 	m.Lock()
 	defer m.Unlock()
-	m.counts[fmt.Sprintf("http_req_total,%s", tags)]++
 	for _, b := range buckets {
-		if ms <= b {
-			m.counts[fmt.Sprintf("http_dur_bucket,%s,le=%d", tags, b)]++
+		if v <= b {
+			m.counts[fmt.Sprintf("%s_bucket,%s,le=%d", name, tags, b)]++
 		}
 	}
-	m.counts[fmt.Sprintf("http_dur_bucket,%s,le=+Inf", tags)]++
-	m.counts[fmt.Sprintf("http_dur_sum,%s", tags)] += ms
-	m.counts[fmt.Sprintf("http_dur_count,%s", tags)]++
+	m.counts[fmt.Sprintf("%s_bucket,%s,le=+Inf", name, tags)]++
+	m.counts[fmt.Sprintf("%s_sum,%s", name, tags)] += v
+	m.counts[fmt.Sprintf("%s_count,%s", name, tags)]++
 }
 
 func (m *M) Collect() map[string]any {
+	if m == nil {
+		return nil
+	}
 	m.Lock()
 	kvs, a := map[string]any{}, m.active
 	for k, v := range m.counts {
@@ -132,4 +142,14 @@ func (m *M) Collect() map[string]any {
 func (w *writer) WriteHeader(c int) {
 	w.code = c
 	w.ResponseWriter.WriteHeader(c)
+}
+
+func (w *writer) Flush() {
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+func (r *writer) Hijack() (c net.Conn, b *bufio.ReadWriter, err error) {
+	return r.ResponseWriter.(http.Hijacker).Hijack()
 }
