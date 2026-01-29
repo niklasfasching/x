@@ -1,0 +1,194 @@
+<script type="application/json" name="owner_can_access_private_app/owner_can_access_private_app">
+  {
+    "body": "<!DOCTYPE html>
+  	<html lang=en>
+  	  <head>
+  	    <meta charset=utf-8>
+  	    <meta name=viewport content=\"width=device-width, initial-scale=1\">
+  	    <link rel=icon href=\"/assets/icon.svg\" type=\"image/svg+xml\">
+  	    <link rel=manifest href=\"/assets/manifest.json\">
+  	    <x-script>
+  	      window.VAPID_KEY = \"\"
+  	        
+  	        localStorage.userAndLevel = \"owner:3\"
+  	        
+  	        window.APP_OWNER = \"owner\"
+  	        window.APP_USERS = [] 
+  	    </x-script>
+  	  </head>
+  	  <body></body>
+  	  
+  	</html>",
+    "code": 200,
+    "header": {
+      "Content-Type": [
+        "text/html"
+      ]
+    }
+  }
+</script>
+
+<script type="application/json" name="other_cannot_access_private_app/other_cannot_access_private_app">
+  {
+    "body": "<a href=\"http://murks.localhost:9002\">Temporary Redirect</a>.
+  	
+  	",
+    "code": 307,
+    "header": {
+      "Content-Type": [
+        "text/html; charset=utf-8"
+      ],
+      "Location": [
+        "http://murks.localhost:9002"
+      ]
+    }
+  }
+</script>
+
+<script type="application/json" name="other_can_access_public_app/other_can_access_public_app">
+  {
+    "body": "<!DOCTYPE html>
+  	<html lang=en>
+  	  <head>
+  	    <meta charset=utf-8>
+  	    <meta name=viewport content=\"width=device-width, initial-scale=1\">
+  	    <link rel=icon href=\"/assets/icon.svg\" type=\"image/svg+xml\">
+  	    <link rel=manifest href=\"/assets/manifest.json\">
+  	    <x-script>
+  	      window.VAPID_KEY = \"\"
+  	        
+  	        localStorage.userAndLevel = \"other:1\"
+  	        
+  	        window.APP_OWNER = \"owner\"
+  	        window.APP_USERS = [] 
+  	    </x-script>
+  	  </head>
+  	  <body></body>
+  	  
+  	</html>",
+    "code": 200,
+    "header": {
+      "Content-Type": [
+        "text/html"
+      ]
+    }
+  }
+</script>
+
+<script type="application/json" name="owner_can_access_manifest/owner_can_access_manifest">
+  {
+    "body": "{\"display\":\"standalone\",\"icons\":[{\"sizes\":\"any\",\"src\":\"/assets/icon.svg\",\"type\":\"image/svg+xml\"}],\"name\":\"app\",\"share_target\":{\"action\":\"/api/share\",\"method\":\"POST\",\"params\":{\"text\":\"text\",\"title\":\"title\",\"url\":\"url\"}},\"short_name\":\"\",\"start_url\":\"/\"}
+  	",
+    "code": 200,
+    "header": {
+      "Content-Type": [
+        "application/manifest+json"
+      ]
+    }
+  }
+</script>
+
+<script type="application/json" name="other_cannot_access_icon_of_private_app/other_cannot_access_icon_of_private_app">
+  {
+    "body": "<a href=\"http://murks.localhost:9002\">Temporary Redirect</a>.
+  	
+  	",
+    "code": 307,
+    "header": {
+      "Content-Type": [
+        "text/html; charset=utf-8"
+      ],
+      "Location": [
+        "http://murks.localhost:9002"
+      ]
+    }
+  }
+</script>
+
+<script type="application/json" name="other_cannot_delete_owner_app/other_cannot_delete_owner_app">
+  {
+    "body": "{
+  	  \"err\": \"unauthorized: delete app {other } =\\u003e private (need lvl 2, have 0, auth: cookie)\"
+  	}",
+    "code": 401,
+    "header": {
+      "Access-Control-Allow-Credentials": [
+        "true"
+      ],
+      "Access-Control-Allow-Methods": [
+        "GET, POST, OPTIONS"
+      ],
+      "Access-Control-Allow-Origin": [
+        "http://murks.localhost:9002"
+      ],
+      "Content-Type": [
+        "application/json"
+      ]
+    }
+  }
+</script>
+
+<script type="application/json" name="cross-origin_delete_is_blocked_(cookie_stripping)/cross-origin_delete_is_blocked_(cookie_stripping)">
+  {
+    "body": "{
+  	  \"err\": \"unauthorized: delete app { } =\\u003e private (need lvl 2, have 0, auth: )\"
+  	}",
+    "code": 401,
+    "header": {
+      "Content-Type": [
+        "application/json"
+      ]
+    }
+  }
+</script>
+
+<script type="application/json" name="sibling_subdomain_delete_is_blocked_(cookie_stripping)/sibling_subdomain_delete_is_blocked_(cookie_stripping)">
+  {
+    "body": "{
+  	  \"err\": \"unauthorized: delete app { } =\\u003e private (need lvl 2, have 0, auth: )\"
+  	}",
+    "code": 401,
+    "header": {
+      "Content-Type": [
+        "application/json"
+      ]
+    }
+  }
+</script>
+
+<script type="application/json" name="other_cannot_request_prompt_for_owner_app/other_cannot_request_prompt_for_owner_app">
+  {
+    "body": "{
+  	  \"err\": \"unauthorized for app private \\\"\\\": {other } 0\"
+  	}",
+    "code": 401,
+    "header": {
+      "Content-Type": [
+        "application/json"
+      ]
+    }
+  }
+</script>
+
+<script type="application/json" name="owner_can_delete_app_from_root/owner_can_delete_app_from_root">
+  {
+    "body": "{
+  	  \"result\": \"ok\"
+  	}",
+    "code": 200,
+    "header": {
+      "Access-Control-Allow-Credentials": [
+        "true"
+      ],
+      "Access-Control-Allow-Methods": [
+        "GET, POST, OPTIONS"
+      ],
+      "Access-Control-Allow-Origin": [
+        "http://murks.localhost:9002"
+      ],
+      "Content-Type": [
+        "application/json"
+      ]
+    }
+  }
+</script>

@@ -1,0 +1,21 @@
+<noscript name="private_app_access/owner">
+  private.murks.localhost
+</noscript>
+
+<noscript name="private_app_access/other">
+  murks.localhost
+</noscript>
+
+<script type="application/json" name="public_app_permissions/other">
+  {
+    "identity": [
+      "other",
+      "1"
+    ],
+    "location": "public.murks.localhost"
+  }
+</script>
+
+<noscript name="public_app_permissions/other_ping">
+  500: unauthorized {other } 1 < 3
+</noscript>

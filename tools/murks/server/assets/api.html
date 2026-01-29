@@ -1,0 +1,461 @@
+<script>
+{{ define "api.mjs" }}
+  export class API {
+    router(routes) {
+      const nav = (path = location.pathname + location.search, push = true) => {
+        const [pathPart, queryPart] = path.split('?');
+        if (!this.isEditor && push && pathPart !== location.pathname) {
+          history.pushState(null, '', path); // NOTE: canvas (blob iframe) cannot pushState
+        }
+        const query = Object.fromEntries(new URLSearchParams(queryPart || ''));
+        const segments = pathPart.split('/').filter(Boolean);
+        const fullPath = '/' + segments.join('/');
+        const [first, ...params] = segments;
+        const handler = routes[fullPath] || routes['/' + first] || routes['/'] || (() => {});
+        handler({params, query});
+      };
+
+      addEventListener('click', (e) => {
+        const a = e.target.closest('a[href^="/"]');
+        if (a && !a.target && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          nav(a.pathname + a.search);
+        }
+      });
+      nav(location.pathname + location.search, false);
+      return nav;
+    }
+    constructor(token, manifest) {
+      this.base = token ? new URL(import.meta.url).origin : location.origin;
+      this.token = token || "";
+      this.vapid = window.VAPID_KEY || "";
+      this.isEditor = !!this.token;
+      this.assetDefs = manifest?.assetDefs || {};
+      this.assetCache = new Map();
+      this.ready = this.init(manifest);
+      window.api = this;
+    }
+
+    async init(manifest) {
+      document.body.classList.toggle("is-editor", this.isEditor);
+      if (this.isEditor) {
+        // NOTE: canvas (blob iframe) cannot new URL("/") using bare paths otherwise
+        document.head.append(Object.assign(document.createElement("base"), {href: this.base}));
+        await this.deploy(manifest);
+        await this.generateAssets(manifest);
+      }
+      return true
+    }
+
+    async deploy(manifest) {
+      manifest.ChatID = window.__app_id;
+      manifest.HTML = document.querySelector("main")?.outerHTML || "";
+      if (!manifest.HTML.includes("/api.mjs")) throw new Error("script not in main elem");
+      manifest.JS = document.querySelector(`script[type="app/worker"]`)?.innerText;
+      await this.req("deploy", "", manifest)
+    }
+
+    async req(cmd, action, data) {
+      const url = `${this.base}/api/${cmd}${action ? '/' + action : ''}`;
+      const r = await fetch(url, {
+        method: "POST",
+        headers: {"X-Token": this.token},
+        body: JSON.stringify(data),
+      });
+      const txt = await r.text();
+      let v = {};
+      try { v = JSON.parse(txt); } catch (e) {}
+      if (!r.ok || r.status >= 400) {
+        const details = `URL: ${url}\nStatus: ${r.status}\nResponse: ${txt}`;
+        this.toast(`${r.status}: ${v.err || r.statusText || txt}`, details);
+        throw new Error(`${r.status}: ${v.err || r.statusText || txt}`);
+      }
+      return v.result;
+    }
+
+    async subPush(forceRecreate = false) {
+      if (this.isEditor) return void this.toast("Push notifications do not work in canvas");
+      if (!('serviceWorker' in navigator)) return void this.toast("ServiceWorker not supported");
+      const b64 = (s) => new Uint8Array([...atob(s.replace(/-/g, '+').replace(/_/g, '/'))].map(c =>
+        c.charCodeAt(0)));
+      const sw = await navigator.serviceWorker.register('/assets/sw.mjs', {
+        scope: "/", updateViaCache: "none",
+      });
+      await navigator.serviceWorker.ready;
+      if (!sw.pushManager) {
+        this.toast("Use 'Add to Home Screen' to enable notifications", "PushManager not supported");
+        throw new Error("Use 'Add to Home Screen' to enable notifications");
+      }
+      let sub = await sw.pushManager.getSubscription();
+      const vapid = this.vapid;
+      if (sub && (forceRecreate || (vapid && b64(vapid).some((v, i) =>
+        v !== new Uint8Array(sub.options.applicationServerKey)[i])))) {
+        await sub.unsubscribe();
+        sub = null;
+      }
+      if (!sub) {
+        if (!vapid) throw new Error("vapid key missing");
+        sub = await sw.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(vapid) });
+      }
+      return this.req("push", "sub", sub);
+    }
+
+    identity() {
+      if (!localStorage.userAndLevel && this.isEditor) localStorage.userAndLevel = "AI:3";
+      else if (!localStorage.userAndLevel) localStorage.userAndLevel = `user#${Math.random() * 1e3 | 0}:1`;
+      return localStorage.userAndLevel.split(":");
+    }
+
+    exec(action, ...args) { return this.req("exec", action, args); }
+    query(action, ...args) { return this.req("query", action, args); }
+    fetch(url, options = {}) { return this.req("fetch", "", {url, ...options}); }
+    emitSSE(v) { return this.req("events", "", v); }
+
+    subSSE(f) {
+      const q = `token=${encodeURIComponent(this.token)}`;
+      const x = new EventSource(`${this.base}/api/events?${q}`);
+      x.onmessage = e => f(JSON.parse(e.data));
+      return x;
+    }
+
+    emitPush(title, body, users = []) {
+      return this.req("push", "emit", {
+        user: this.identity()[0], title, body, users,
+      });
+    }
+
+    ws() {
+      const q = `token=${encodeURIComponent(this.token)}`;
+      const url = new URL(`${this.base}/api/ws?${q}`);
+      url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      return new WebSocket(url.toString());
+    }
+
+    async cronSave(schedule, title, body, count) {
+      await this.subPush();
+      return this.req("cron", "save", {schedule, title, body, count});
+    }
+    cronList() { return this.req("cron", "list", null); }
+    cronDelete(id) { return this.req("cron", "delete", {id}); }
+
+    async generateAssets(manifest, concurrency = 5) {
+      const startTime = Date.now(), total = Object.keys(this.assetDefs).length;
+      const missing = await this.req("assets", "", this.assetDefs);
+      if (missing.length === 0) return;
+      let completed = total - missing.length;
+      const progress = (msg, isErr) => this.toast(msg, "", {id: "gen-assets", duration: 0, isErr});
+      const updateProgress = () => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        progress(`Generating assets... (${completed}/${total} completed, ${elapsed}s)`);
+      };
+      const g = new AssetGenerator(), interval = setInterval(updateProgress, 1000);
+      const queue = [...missing];
+      const worker = async () => {
+        while (queue.length) {
+          const name = queue.shift();
+          if (!name) continue;
+          let def = this.assetDefs[name], assetBlob;
+          for (let i of [1, 2, 3]) {
+            try {
+              assetBlob = await g.generate(def.type, def.prompt, def);
+              break
+            } catch (err) {
+              this.toast(`Asset ${name} failed: ${err} (attempt ${i}/3)`);
+              if (i === 3) throw err;
+            }
+          }
+          const data = await new Promise((res, rej) => {
+            const r = new FileReader();
+            r.onload = () => res(r.result.split(',')[1]), r.onerror = rej;
+            r.readAsDataURL(assetBlob);
+          });
+          await this.req("assets", name, {
+            name, data, prompt: def.prompt, mime: assetBlob.type,
+          });
+          completed++;
+          updateProgress();
+        }
+      };
+      try {
+        updateProgress();
+        await Promise.all(Array.from({length: Math.min(concurrency, missing.length)}, worker));
+        clearInterval(interval);
+        this.toast(`Assets finished generating!`, "", {id: "gen-assets"});
+      } catch (err) {
+        clearInterval(interval);
+        this.toast(`Asset generation failed: ${err.message}`, "", {id: "gen-assets", isErr: true});
+        throw err
+      }
+    }
+
+    async getAsset(name) {
+      await this.ready;
+      if (this.assetCache.has(name)) return this.assetCache.get(name);
+      const r = await fetch(`${this.base}/assets/${name}`, {
+        headers: {"X-Token": this.token},
+      });
+      if (!r.ok) throw new Error(`Asset ${name} not found`);
+      const blob = await r.blob();
+      this.assetCache.set(name, blob);
+      return blob;
+    }
+
+    toast(msg, details = "", opts = {}) {
+      window.notify(msg, opts.isErr || !!details, details, opts);
+    }
+  }
+
+  export class AssetGenerator {
+    get isAvailable() { return !!window.__app_id; }
+
+    async generate(type, prompt, options = {}) {
+      if (type === "image") return this.image(prompt, options);
+      if (type === "tts") return this.speech(prompt, options);
+      const text = await this.text(prompt, options);
+      return new Blob([text], {type: options.responseMimeType || "text/plain"});
+    }
+
+    async text(prompt, {system, temperature, topP, topK, maxOutputTokens, responseMimeType} = {}) {
+      if (!this.isAvailable) throw new Error("AI features only available in editor");
+      const body = {contents: [{parts: [{text: prompt}]}]};
+      if (system) body.systemInstruction = {parts: [{text: system}]};
+      const cfg = {temperature, topP, topK, maxOutputTokens, responseMimeType};
+      Object.keys(cfg).forEach(k => cfg[k] === undefined && delete cfg[k]);
+      if (Object.keys(cfg).length) body.generationConfig = cfg;
+      const data = await this.req("gemini-2.5-flash-preview-09-2025", "generateContent", body);
+      return data.candidates?.[0]?.content?.parts?.[0]?.text;
+    }
+
+    async speech(text, {voiceName = "Kore"} = {}) {
+      if (!this.isAvailable) throw new Error("AI features only available in editor");
+      const data = await this.req("gemini-2.5-flash-preview-tts", "generateContent", {
+        contents: [{parts: [{text}]}],
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {voiceConfig: {prebuiltVoiceConfig: {voiceName}}},
+        },
+      });
+      const b64 = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (!b64) throw new Error("No audio data returned");
+      const raw = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      return this.withWavHeader(raw, 24000);
+    }
+
+    async image(prompt, options = {}) {
+      const r = await this.req("imagen-4.0-generate-001", "predict", {
+        instances: {prompt},
+        parameters: {sampleCount: options.sampleCount || 1, aspectRatio: options.aspectRatio}
+      });
+      const b64 = r.predictions?.[0]?.bytesBase64Encoded;
+      if (!b64) throw new Error("No image data");
+      const blob = new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))],
+                            {type: "image/png"});
+      return this.shrink(blob);
+    }
+
+    async req(model, action, body) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models`;
+      const r = await fetch(`${url}/${model}:${action}?key=`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(body)
+      });
+      const txt = await r.text();
+      let data = {};
+      try { data = JSON.parse(txt); } catch (e) {}
+      if (!r.ok) throw new Error(data.error?.message || r.statusText || txt);
+      return data;
+    }
+
+    async shrink(blob, width = 1024) {
+      const bitmap = await createImageBitmap(blob);
+      const canvas = document.createElement("canvas");
+      const ratio = width / bitmap.width;
+      canvas.width = width;
+      canvas.height = bitmap.height * ratio;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      return new Promise(res => canvas.toBlob(res, "image/webp", 0.9));
+    }
+
+    withWavHeader(pcmData, sampleRate = 24000) {
+      const len = pcmData.length,
+            buf = new ArrayBuffer(44 + len),
+            view = new DataView(buf);
+      const writeStr = (off, s) => {[...s].forEach((char, i) =>
+        view.setUint8(off + i, char.charCodeAt(0)))};
+      writeStr(0, 'RIFF');
+      view.setUint32(4, 36 + len, true);
+      writeStr(8, 'WAVE');
+      writeStr(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeStr(36, 'data');
+      view.setUint32(40, len, true);
+      new Uint8Array(buf, 44).set(pcmData);
+      return new Blob([buf], { type: 'audio/wav' });
+    }
+  }
+
+
+  {{ template "toast-js" . }}
+{{ end }}
+</script>
+
+
+<script>
+{{ define "toast-js" }}
+  window.__activeToasts = window.__activeToasts || new Map();
+
+  const css = `
+    #__toasts {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      pointer-events: none;
+    }
+
+    .__toast {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 1.25rem;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      border-radius: 0.5rem;
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+      animation: __toast_in 0.2s ease-out;
+      pointer-events: auto;
+      &.err { background: #ff3b30; }
+      & button {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        display: flex;
+      }
+    }
+    @keyframes __toast_in {
+      from { opacity: 0; transform: translateY(10px); }
+    }
+  `;
+
+  window.notify = (msg, isErr, details, opts = {}) => {
+    if (!msg && !opts.close) return;
+    const id = opts.id || msg;
+    const existing = window.__activeToasts.get(id);
+    if (opts.close) return void existing?.close();
+    if (existing) {
+      if (!opts.id) existing.count++;
+      const span = existing.el.querySelector('span');
+      if (span) span.textContent = msg;
+      const b = existing.el.querySelector('.__badge');
+      if (b && !opts.id) b.textContent = existing.count;
+      if (isErr) existing.el.classList.add("err");
+      else existing.el.classList.remove("err");
+      clearTimeout(existing.timer);
+      if (opts.duration !== 0) {
+        existing.timer = setTimeout(existing.close, opts.duration || 5000);
+      }
+      return;
+    }
+    let container = document.getElementById("__toasts");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "__toasts";
+      document.body.appendChild(container);
+      const style = document.createElement('style');
+      style.textContent = css;
+      container.appendChild(style);
+    }
+    const toast = document.createElement("div");
+    toast.className = "__toast" + (isErr ? " err" : "");
+    toast.innerHTML = `<span>${msg}</span>`;
+    const close = () => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(10px)';
+      setTimeout(() => {
+        toast.remove();
+        window.__activeToasts.delete(id);
+      }, 200);
+    };
+    if (isErr) {
+        const copy = document.createElement("button");
+        copy.className = "__copy";
+      copy.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2">
+          </rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1">
+          </path>
+        </svg>`;
+      copy.onclick = () => {
+        const content = details ? `${msg}\n${details}` : msg;
+        navigator.clipboard.writeText(content).catch(err => window.notify(content));
+      };
+      toast.appendChild(copy);
+    }
+    const btn = document.createElement("button");
+    btn.className = "__close";
+    btn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="3">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>`;
+    btn.onclick = close;
+    toast.appendChild(btn);
+    container.appendChild(toast);
+    let timer;
+    if (opts.duration !== 0) timer = setTimeout(close, opts.duration || 5000);
+    window.__activeToasts.set(id, { el: toast, count: 1, timer, close });
+  };
+  window.addEventListener("error", (e) => {
+    // NOTE: filter out generic "Script error :0." Only ever seen in WebView. whatever.
+    if (e.message === "Script error." && e.lineno === 0 && e.colno === 0) return;
+    notify(e.message, true, e.error?.stack || `${e.filename}:${e.lineno}:${e.colno}`);
+  });
+  window.addEventListener("unhandledrejection", (e) =>
+    notify(e.reason?.message || e.reason, true, e.reason?.stack));
+{{ end }}
+</script>
+
+<script>
+{{ define "sw.mjs" }}
+  self.addEventListener("install", (e) => self.skipWaiting());
+  self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
+  self.addEventListener("push", (e) => {
+    let data = {title: "Update", body: "Something happened"};
+    try { data = e.data?.json(); }
+    catch (err) { console.error("push: parse error", err); }
+    e.waitUntil(
+      self.registration.showNotification(data.title, {
+        body: data.body,
+        icon: "/assets/icon.svg",
+        badge: "/assets/icon.svg",
+        tag: "app-update",
+        renotify: true,
+        data: {url: self.registration.scope}
+      })
+    );
+  });
+
+  self.addEventListener("notificationclick", (e) => {
+    e.notification.close();
+    const targetUrl = e.notification.data.url;
+    e.waitUntil(clients.matchAll({type: "window", includeUncontrolled: true}).then((tabs) => {
+      for (const tab of tabs) if (tab.url === targetUrl && "focus" in tab) return tab.focus();
+      if (clients.openWindow) return clients.openWindow(targetUrl);
+    }));
+  });
+  {{ .JS }}
+{{ end }}
+</script>
