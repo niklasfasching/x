@@ -5,10 +5,12 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"html/template"
+	"io"
 	"maps"
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"text/template/parse"
 
@@ -18,7 +20,55 @@ import (
 type Compiler struct {
 	*Context
 	Calls       map[string][]string
+	Sources     map[string]string
 	processElem func(c *Compiler, p *Frame, n *Node)
+}
+
+type Template struct {
+	*template.Template
+	Sources map[string]string
+}
+
+var templateErrRe = regexp.MustCompile(`template: (.*?):(\d+):`)
+
+func (t *Template) Execute(w io.Writer, data any) error {
+	return t.WrapError(t.Template.Execute(w, data))
+}
+
+func (t *Template) Lookup(name string) *Template {
+	tpl := t.Template.Lookup(name)
+	if tpl == nil {
+		return nil
+	}
+	return &Template{tpl, t.Sources}
+}
+
+func (t *Template) WrapError(err error) error {
+	if err == nil {
+		return nil
+	}
+	m := templateErrRe.FindStringSubmatch(err.Error())
+	if m == nil {
+		return err
+	}
+	name, lineStr := m[1], m[2]
+	line, _ := strconv.Atoi(lineStr)
+	src, ok := t.Sources[name]
+	if !ok {
+		return err
+	}
+	lines := strings.Split(src, "\n")
+	start, end := max(0, line-10), min(len(lines), line+10)
+	w := &strings.Builder{}
+	fmt.Fprintf(w, "%v\n\n", err)
+	for i := start; i < end; i++ {
+		marker := "  "
+		if i+1 == line {
+			marker = "> "
+		}
+		fmt.Fprintf(w, "%s%3d | %s\n", marker, i+1, lines[i])
+	}
+	return fmt.Errorf("%s", w.String())
 }
 
 type Frame struct {
@@ -32,7 +82,7 @@ var isComponentTplName = regexp.MustCompile(`^<[\w-]+>$`).MatchString
 var isAssetTplName = regexp.MustCompile(`^\[[\w-]+\]$`).MatchString
 
 func NewCompiler(processElem func(c *Compiler, f *Frame, n *Node)) *Compiler {
-	return &Compiler{New(), map[string][]string{}, processElem}
+	return &Compiler{New(), map[string][]string{}, map[string]string{}, processElem}
 }
 
 // Compile expands syntax sugar for html in a template and all its subtemplates.
@@ -42,7 +92,7 @@ func NewCompiler(processElem func(c *Compiler, f *Frame, n *Node)) *Compiler {
 // to the component template. However, templates are first parsed and compiled un-inlined
 // by html/template, and references to variables outside the scope of the component template
 // thus cause compile errors and thus prevent abuse of the scope leak.
-func (c *Compiler) Compile(tpl *template.Template) (err error) {
+func (c *Compiler) Compile(tpl *template.Template) (t *Template, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = r.(error)
@@ -73,7 +123,8 @@ func (c *Compiler) Compile(tpl *template.Template) (err error) {
 		} else {
 			nt.Type = FragmentNode
 		}
-		if _, err := tpl.Parse(c.RenderHTML(nt)); err != nil {
+		c.Sources[name] = c.RenderHTML(nt)
+		if _, err := tpl.Parse(c.Sources[name]); err != nil {
 			panic(fmt.Errorf(`failed to parse component %q: %w`, name, err))
 		}
 		if _, err := tpl.New("[assets]" + name).Parse(c.RenderHTML(rest...)); err != nil {
@@ -87,13 +138,15 @@ func (c *Compiler) Compile(tpl *template.Template) (err error) {
 		k, ns := strings.TrimPrefix(tpl.Name(), "[assets]"), c.ParseList(tpl.Tree.Root)
 		f := &Frame{Node: &Node{Tag: tpl.Name()}, Calls: map[string]int{}, Root: true}
 		c.Walk(tpl, ns, f)
-		c.Calls[k] = append(slices.Collect(maps.Keys(f.Calls)), c.Calls[k]...)
+		c.Calls[k] = append(slices.Sorted(maps.Keys(f.Calls)), c.Calls[k]...)
 		h := sha256.New()
 		h.Write([]byte(tpl.Tree.Root.String()))
-		if _, err := tpl.Parse(c.RenderHTML(ns...)); err != nil {
+		c.Sources[tpl.Name()] = c.RenderHTML(ns...)
+		if _, err := tpl.Parse(c.Sources[tpl.Name()]); err != nil {
 			panic(fmt.Errorf(`failed to parse %q: %w`, tpl.Name(), err))
 		}
 		tpl.Tree.ParseName = fmt.Sprintf("%s (%.12x)", tpl.Tree.ParseName, h.Sum(nil))
+		c.Sources[tpl.Tree.ParseName] = c.Sources[tpl.Name()]
 	}
 	c.resolveCalls()
 	w := &strings.Builder{}
@@ -108,10 +161,11 @@ func (c *Compiler) Compile(tpl *template.Template) (err error) {
 		}
 		fmt.Fprintf(w, "{{end}}")
 	}
-	if _, err := tpl.New("[assets]").Parse(w.String()); err != nil {
+	c.Sources["[assets]"] = w.String()
+	if _, err := tpl.New("[assets]").Parse(c.Sources["[assets]"]); err != nil {
 		panic(fmt.Errorf(`failed to parse "[assets]": %w`, err))
 	}
-	return err
+	return &Template{tpl, c.Sources}, nil
 }
 
 func (c *Compiler) Walk(tpl *template.Template, ns []*Node, f *Frame) {
@@ -201,9 +255,22 @@ func (c *Compiler) inlineComponent(tpl *template.Template, n *Node, f *Frame) {
 			attrs = append(attrs, a)
 		}
 	}
+	componentNodes := c.ParseList(tpl.Lookup(name).Tree.Root)
+	if len(componentNodes) > 0 && componentNodes[0].Tag == "template" {
+		for _, a := range componentNodes[0].Attrs {
+			if p, ok := strings.CutPrefix(a.Key, "..."); ok && a.Val == "" && c.Placeholders[p] != nil {
+				for v := range strings.FieldsSeq(c.ExpandString(p)) {
+					ks := strings.Split(strings.TrimPrefix(v, "$"), ".")
+					k := camelToKebab(ks[len(ks)-1])
+					fmt.Fprintf(w, " %q %s", k, v)
+				}
+			} else {
+				fmt.Fprintf(w, " (%s) (%s)", c.ExpandString(a.Key), c.ExpandString(a.Val))
+			}
+		}
+	}
 	n.Attrs = attrs
 	w.WriteString(")")
-	componentNodes := c.ParseList(tpl.Lookup(name).Tree.Root)
 	c.Walk(tpl, componentNodes, &Frame{slots, f.Calls, n, false})
 	*n = *c.BranchNode("with", "$dot := .",
 		[]*Node{c.BranchNode("with", w.String(), componentNodes, nil)}, nil)

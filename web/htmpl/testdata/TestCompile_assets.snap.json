@@ -8,10 +8,10 @@
       "[css-reset]"
     ],
     "test-assets": [
-      "[assets]",
       "[css-reset]",
       "[css-utilities]",
-      "<component>"
+      "<component>",
+      "[assets]"
     ]
   },
   "assets/test-assets/compiled:<component>#01": [
@@ -386,7 +386,7 @@
           "Type": 1,
           "Tag": "",
           "Text": "
-	  component css
+	  component css 
 	",
           "Attrs": null,
           "SelfClosing": false,

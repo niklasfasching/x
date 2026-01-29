@@ -2,6 +2,9 @@
   "ellipsis-spread/test-ellipsis-spread/calls": {
     "test-ellipsis-spread": [
       "<x>"
+    ],
+    "test-noop-ellipsis-spread": [
+      "<y>"
     ]
   },
   "ellipsis-spread/test-ellipsis-spread/compiled:<x>#01": [
@@ -21,7 +24,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{71}}"
+          "Val": "{{80}}"
         }
       ],
       "SelfClosing": true,
@@ -30,8 +33,7 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	",
+      "Text": "",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -44,7 +46,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{72}}"
+          "Val": "{{81}}"
         }
       ],
       "SelfClosing": true,
@@ -53,9 +55,7 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	-
-	",
+      "Text": " -",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -68,7 +68,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{73}}"
+          "Val": "{{82}}"
         }
       ],
       "SelfClosing": true,
@@ -77,10 +77,8 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	== nested value
-	    -
-	",
+      "Text": " == nested value
+	    -",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -93,7 +91,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{74}}"
+          "Val": "{{83}}"
         }
       ],
       "SelfClosing": true,
@@ -102,10 +100,8 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	== value-of-b
-	    -
-	",
+      "Text": " == value-of-b
+	    -",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -118,7 +114,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{75}}"
+          "Val": "{{84}}"
         }
       ],
       "SelfClosing": true,
@@ -127,10 +123,8 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	== 42
-	    -
-	",
+      "Text": " == 42
+	    -",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -143,7 +137,7 @@
         {
           "Namespace": "",
           "Key": "pipe",
-          "Val": "{{76}}"
+          "Val": "{{85}}"
         }
       ],
       "SelfClosing": true,
@@ -152,8 +146,7 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	== eval(c)
+      "Text": " == eval(c)
 	    Ellipsis inside component allows forwarding/spreading attributes of the component call
 	    to child elements. Only values that exist are forwarded (to allow forwarding optional attributes)
 	",
@@ -168,7 +161,7 @@
       "Attrs": [
         {
           "Namespace": "",
-          "Key": "...{{69}}",
+          "Key": "...{{78}}",
           "Val": ""
         }
       ],
@@ -179,7 +172,7 @@
       "Type": 1,
       "Tag": "",
       "Text": "
-	It allows allows spreading all attributes except some via `ne`: (all except value and bValue)
+	It allows allows spreading all attributes except some via `ne`: (all except value and bValue) 
 	",
       "Attrs": null,
       "SelfClosing": false,
@@ -192,7 +185,7 @@
       "Attrs": [
         {
           "Namespace": "",
-          "Key": "...{{70}}",
+          "Key": "...{{79}}",
           "Val": ""
         }
       ],
@@ -278,6 +271,73 @@
           "Namespace": "",
           "Key": "c",
           "Val": "eval(c)"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    },
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    }
+  ],
+  "ellipsis-spread/test-noop-ellipsis-spread/calls": {
+    "test-ellipsis-spread": [
+      "<x>"
+    ],
+    "test-noop-ellipsis-spread": [
+      "<y>"
+    ]
+  },
+  "ellipsis-spread/test-noop-ellipsis-spread/compiled:<y>#01": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": ".=",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "t:action",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "pipe",
+          "Val": "{{68}}"
+        }
+      ],
+      "SelfClosing": true,
+      "Children": null
+    }
+  ],
+  "ellipsis-spread/test-noop-ellipsis-spread/compiled:[assets]<y>#01": null,
+  "ellipsis-spread/test-noop-ellipsis-spread/nodes": [
+    {
+      "Type": 1,
+      "Tag": "",
+      "Text": "
+	  ",
+      "Attrs": null,
+      "SelfClosing": false,
+      "Children": null
+    },
+    {
+      "Type": 3,
+      "Tag": "y",
+      "Text": "",
+      "Attrs": [
+        {
+          "Namespace": "",
+          "Key": "...{{1}}",
+          "Val": ""
         }
       ],
       "SelfClosing": true,

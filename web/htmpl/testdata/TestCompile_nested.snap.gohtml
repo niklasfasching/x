@@ -1,7 +1,6 @@
 <noscript name="nested/test-nested/nodes-to-html">
   <x-parent foo=foo-value>
-    rest slot with value of a at x-parent callsite:
-    {{.a}}
+    rest slot with value of a at x-parent callsite: {{.a}}
   </x-parent>
 </noscript>
 
@@ -12,26 +11,23 @@
         {{with $dot := .}}
           {{with (dict "caller" "<x-parent>" "slots" (list (dict "name" "a")))}}
             <child>
-              slot a of parent inside child:
+              slot a of parent inside child: 
               {{with $dot}}
-                rest slot from callsite in parent:
+                rest slot from callsite in parent: 
                 {{with $dot}}
-                  rest slot with value of a at x-parent callsite:
-                  {{.a}}
+                  rest slot with value of a at x-parent callsite: {{.a}}
                 {{end}}
               {{end}}
             </child>
           {{end}}
-        {{end}}
-      </parent>
+        {{end}}</parent>
     {{end}}
   {{end}}
 </noscript>
 
 <noscript name="nested/test-nested/compiled:<x-child>">
   <child>
-    slot a of parent inside child:
-    {{.slots.a}}
+    slot a of parent inside child: {{.slots.a}}
   </child>
 </noscript>
 
@@ -44,15 +40,13 @@
     {{with $dot := .}}
       {{with (dict "caller" "<x-parent>" "slots" (list (dict "name" "a")))}}
         <child>
-          slot a of parent inside child:
+          slot a of parent inside child: 
           {{with $dot}}
-            rest slot from callsite in parent:
-            {{.slots.rest}}
+            rest slot from callsite in parent: {{.slots.rest}}
           {{end}}
         </child>
       {{end}}
-    {{end}}
-  </parent>
+    {{end}}</parent>
 </noscript>
 
 <noscript name="nested/test-nested/compiled:[assets]<x-parent>">
@@ -66,18 +60,16 @@
         
           
             <child>
-              slot a of parent inside child:
+              slot a of parent inside child: 
               
-                rest slot from callsite in parent:
+                rest slot from callsite in parent: 
                 
-                  rest slot with value of a at x-parent callsite:
-                  
+                  rest slot with value of a at x-parent callsite: 
                 
               
             </child>
           
-        
-      </parent>
+        </parent>
     
   
 </noscript>

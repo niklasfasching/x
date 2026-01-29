@@ -12,6 +12,7 @@ func TestCompile(t *testing.T) {
 	data := map[string]any{
 		"a": "value-of-a",
 		"b": "value-of-b",
+		"s": struct{ A string }{A: "value-of-a"},
 	}
 	snap.Cases(t, "*.case.gohtml", func(t *testing.T, name string, bs []byte) {
 		sHTML := snap.NewNamed(t, ".gohtml")
@@ -25,22 +26,31 @@ func TestCompile(t *testing.T) {
 			if !strings.HasPrefix(tpl.Name(), "test-") {
 				continue
 			}
+			tpl, err = tpl.Clone()
+			if err != nil {
+				t.Fatal(err)
+			}
 			t.Run(tpl.Name(), func(t *testing.T) {
 				c := NewCompiler(ProcessDirectives)
 				ns := c.ParseList(tpl.Tree.Root)
 				sJSON.KeyedSnap(t, "nodes", ns)
 				sHTML.KeyedSnap(t, "nodes-to-html", snap.HTML(c.RenderHTML(ns...)))
-				if err := c.Compile(tpl); err != nil {
+				tpl, err := c.Compile(tpl)
+				if err != nil {
 					t.Fatal(err)
 				}
 				sJSON.KeyedSnap(t, "calls", c.Calls)
 				sHTML.KeyedSnap(t, "compiled", snap.HTML(tpl.Tree.Root.String()))
 				for _, name := range c.Calls[tpl.Name()] {
-					sHTML.KeyedSnap(t, "compiled:"+name, snap.HTML(tpl.Lookup(name).Tree.Root.String()))
-					sJSON.KeyedSnap(t, "compiled:"+name, c.ParseList(tpl.Lookup(name).Tree.Root))
+					sHTML.KeyedSnap(t, "compiled:"+name,
+						snap.HTML(tpl.Lookup(name).Tree.Root.String()))
+					sJSON.KeyedSnap(t, "compiled:"+name,
+						c.ParseList(tpl.Lookup(name).Tree.Root))
 					if name := "[assets]" + name; tpl.Lookup(name) != nil {
-						sHTML.KeyedSnap(t, "compiled:"+name, snap.HTML(tpl.Lookup(name).Tree.Root.String()))
-						sJSON.KeyedSnap(t, "compiled:"+name, c.ParseList(tpl.Lookup(name).Tree.Root))
+						sHTML.KeyedSnap(t, "compiled:"+name,
+							snap.HTML(tpl.Lookup(name).Tree.Root.String()))
+						sJSON.KeyedSnap(t, "compiled:"+name,
+							c.ParseList(tpl.Lookup(name).Tree.Root))
 					}
 				}
 				w := &strings.Builder{}

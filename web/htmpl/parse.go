@@ -210,24 +210,41 @@ func (c *Context) BranchNode(kind, pipe string, ns, elseNS []*Node) *Node {
 	return n
 }
 
+func (c *Context) collapseSpace(s string) (trimmed, lPad, rPad string) {
+	tmp := strings.TrimLeft(s, "\n\t ")
+	trimmed = strings.TrimRight(tmp, "\n\t ")
+	if len(tmp) != len(s) {
+		lPad = " "
+	}
+	if len(tmp) != len(trimmed) {
+		rPad = " "
+	}
+	return
+}
+
 func (c *Context) renderHTML(w *strings.Builder, ns []*Node, lvl int, isRaw, isSVG bool) bool {
-	indent, isEmpty := strings.Repeat("  ", lvl), true
+	indent, isEmpty, prevType := strings.Repeat("  ", lvl), true, html.ElementNode
 	for _, n := range ns {
-		isWhitespace := n == nil || n.Type == html.TextNode && strings.TrimSpace(n.Text) == ""
-		if isWhitespace {
-			continue
-		}
-		switch isEmpty = false; n.Type {
+		switch n.Type {
 		case html.DoctypeNode:
 			fmt.Fprintf(w, "<!DOCTYPE %s>", n.Text)
 		case html.TextNode:
 			// NOTE: text is not unescaped during parsing and thus not escaped here
-			fmt.Fprintf(w, "\n%s%s", indent, strings.TrimSpace(n.Text))
+			if s, lPad, rPad := c.collapseSpace(n.Text); len(s) == 0 {
+				continue
+			} else if prevType != html.TextNode {
+				fmt.Fprintf(w, "\n%s%s%s", indent, s, rPad)
+			} else {
+				fmt.Fprintf(w, "%s%s", lPad, s)
+			}
 		case FragmentNode:
 			c.renderHTML(w, n.Children, lvl+1, rawTags[n.Tag], isSVG)
 		case html.ElementNode:
 			if strings.HasPrefix(n.Tag, "t:") {
 				c.renderTHTML(w, n, lvl, isRaw, isSVG)
+				if n.Tag == "t:action" {
+					prevType = html.TextNode
+				}
 				continue
 			}
 			isSVG = isSVG || n.Tag == "svg"
@@ -255,6 +272,7 @@ func (c *Context) renderHTML(w *strings.Builder, ns []*Node, lvl int, isRaw, isS
 				fmt.Fprintf(w, "</%s>", n.Tag)
 			}
 		}
+		isEmpty, prevType = false, n.Type
 	}
 	return isEmpty
 }
@@ -264,15 +282,14 @@ func (c *Context) renderTHTML(w *strings.Builder, n *Node, lvl int, isRaw, isSVG
 	if n, ok := c.Placeholders[pipe]; ok {
 		pipe = n.String()
 	}
-	fmt.Fprintf(w, "\n%s", indent)
 	switch n.Tag {
 	case "t:action":
 		fmt.Fprintf(w, "{{%s}}", pipe)
 	case "t:template":
-		fmt.Fprintf(w, "{{template %q %s}}", n.Attr("name").Val, pipe)
+		fmt.Fprintf(w, "\n%s{{template %q %s}}", indent, n.Attr("name").Val, pipe)
 	case "t:branch":
 		keyword := n.Attr("keyword").Val
-		fmt.Fprintf(w, "{{%s %s}}", keyword, pipe)
+		fmt.Fprintf(w, "\n%s{{%s %s}}", indent, keyword, pipe)
 		for _, n := range n.Children {
 			if n.Attr("kind").Val == "else" {
 				fmt.Fprintf(w, "\n%s{{else}}", indent)

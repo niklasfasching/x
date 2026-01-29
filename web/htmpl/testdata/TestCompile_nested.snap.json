@@ -20,8 +20,7 @@
           "Type": 1,
           "Tag": "",
           "Text": "
-	  slot a of parent inside child:
-	  ",
+	  slot a of parent inside child: ",
           "Attrs": null,
           "SelfClosing": false,
           "Children": null
@@ -176,7 +175,7 @@
                               "Type": 1,
                               "Tag": "",
                               "Text": "
-	        slot a of parent inside child:
+	        slot a of parent inside child: 
 	        ",
                               "Attrs": null,
                               "SelfClosing": false,
@@ -225,8 +224,7 @@
                                       "Type": 1,
                                       "Tag": "",
                                       "Text": "
-	          rest slot from callsite in parent:
-	          ",
+	          rest slot from callsite in parent: ",
                                       "Attrs": null,
                                       "SelfClosing": false,
                                       "Children": null
@@ -294,15 +292,6 @@
               ]
             }
           ]
-        },
-        {
-          "Type": 1,
-          "Tag": "",
-          "Text": "
-	",
-          "Attrs": null,
-          "SelfClosing": false,
-          "Children": null
         }
       ]
     }

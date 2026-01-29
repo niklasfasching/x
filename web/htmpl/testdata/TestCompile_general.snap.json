@@ -10,8 +10,7 @@
       "Tag": "",
       "Text": "Each component must have a template; the html inside is what is inlined and rendered at each callsite.
 	    The attributes passed to the component are available as fields on dot, e.g.
-	    - static attributes:
-	",
+	    - static attributes: ",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -33,10 +32,8 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	== static-value
-	    - mixed attributes: concatenated using print:
-	",
+      "Text": " == static-value
+	    - mixed attributes: concatenated using print:",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -58,10 +55,8 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	== foo-value-of-a-bar
-	    - dynamic attributes:
-	",
+      "Text": " == foo-value-of-a-bar
+	    - dynamic attributes:",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -83,11 +78,9 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	== value-of-a
+      "Text": " == value-of-a
 	
-	    In addition, the name of the caller
-	",
+	    In addition, the name of the caller",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -109,12 +102,10 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	as well as slots slots from the call site are available.
+      "Text": " as well as slots slots from the call site are available.
 	    Slots are avaiable as both variables and elements:
 	    - Both named slots:
-	    slots.a:
-	",
+	    slots.a:",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -136,10 +127,8 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	- And the rest:
-	    slots.rest:
-	",
+      "Text": " - And the rest:
+	    slots.rest:",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -161,8 +150,7 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	range .slots:
+      "Text": " range .slots:
 	",
       "Attrs": null,
       "SelfClosing": false,
@@ -211,8 +199,7 @@
               "Type": 1,
               "Tag": "",
               "Text": "
-	  name:
-	  ",
+	  name:",
               "Attrs": null,
               "SelfClosing": false,
               "Children": null
@@ -234,10 +221,8 @@
             {
               "Type": 1,
               "Tag": "",
-              "Text": "
-	  == a
-	      other-field:
-	  ",
+              "Text": " == a
+	      other-field:",
               "Attrs": null,
               "SelfClosing": false,
               "Children": null
@@ -259,8 +244,7 @@
             {
               "Type": 1,
               "Tag": "",
-              "Text": "
-	  == value-of-other-field
+              "Text": " == value-of-other-field
 	",
               "Attrs": null,
               "SelfClosing": false,
@@ -296,7 +280,7 @@
           "Type": 1,
           "Tag": "",
           "Text": "
-	  the attributes set on the component can also be statically forwarded using
+	  the attributes set on the component can also be statically forwarded using 
 	  ",
           "Attrs": null,
           "SelfClosing": false,
@@ -313,7 +297,7 @@
               "Type": 1,
               "Tag": "",
               "Text": "
-	    ...
+	    ... 
 	  ",
               "Attrs": null,
               "SelfClosing": false,
@@ -345,7 +329,7 @@
           "Type": 1,
           "Tag": "",
           "Text": "
-	  some script
+	  some script 
 	",
           "Attrs": null,
           "SelfClosing": false,
@@ -373,7 +357,7 @@
           "Type": 1,
           "Tag": "",
           "Text": "
-	  some style
+	  some style 
 	",
           "Attrs": null,
           "SelfClosing": false,

@@ -1,60 +1,63 @@
+<noscript name="ellipsis-spread/test-noop-ellipsis-spread/nodes-to-html">
+  <y ...{{.}}></y>
+</noscript>
+
+<noscript name="ellipsis-spread/test-noop-ellipsis-spread/compiled">
+  {{with $dot := .}}
+    {{with (dict "caller" "test-noop-ellipsis-spread" "slots" (list) "" .)}}
+      .={{.}}
+    {{end}}
+  {{end}}
+</noscript>
+
+<noscript name="ellipsis-spread/test-noop-ellipsis-spread/compiled:<y>">
+  .={{.}}
+</noscript>
+
+<noscript name="ellipsis-spread/test-noop-ellipsis-spread/compiled:[assets]<y>">
+  
+</noscript>
+
+<noscript name="ellipsis-spread/test-noop-ellipsis-spread/executed">
+  
+    
+      .=map[:map[a:value-of-a b:value-of-b s:{value-of-a}] caller:test-noop-ellipsis-spread slots:[]]
+    
+  
+</noscript>
+
 <noscript name="ellipsis-spread/test-ellipsis-spread/nodes-to-html">
-  {{$params := (dict "nested" (dict "value" "nested value"))}}
-  {{$someValue := 42}}
-  Ellipsis on he component call allows concisely passing values by their name,
+  {{$params := (dict "nested" (dict "value" "nested value"))}}{{$someValue := 42}} Ellipsis on he component call allows concisely passing values by their name,
     fields, nested fields and even variables.
   <x ...{{$params.nested.value .a $someValue}} b-value="{{.b}}" c="eval(c)"></x>
 </noscript>
 
 <noscript name="ellipsis-spread/test-ellipsis-spread/compiled">
-  {{$params := (dict "nested" (dict "value" "nested value"))}}
-  {{$someValue := 42}}
-  Ellipsis on he component call allows concisely passing values by their name,
+  {{$params := (dict "nested" (dict "value" "nested value"))}}{{$someValue := 42}} Ellipsis on he component call allows concisely passing values by their name,
     fields, nested fields and even variables.
   {{with $dot := .}}
-    {{with (dict "caller" "test-ellipsis-spread" "slots" (list) "value" $params.nested.value "a" .a "some-value" $someValue ("b-value") (.b) ("c") ("eval(c)"))}}
-      {{$_x_params := "shadowing var from callsite (solved via namespacing)"}}
-      {{$_x_someValue := "shadowed"}}
-      -
-      {{.value}}
-      == nested value
-      -
-      {{.bValue}}
-      == value-of-b
-      -
-      {{.someValue}}
-      == 42
-      -
-      {{.c}}
-      == eval(c)
+    {{with (dict "caller" "test-ellipsis-spread" "slots" (list) "value" $params.nested.value "a" .a "some-value" $someValue ("b-value") (.b) ("c") ("eval(c)"))}}{{$_x_params := "shadowing var from callsite (solved via namespacing)"}}{{$_x_someValue := "shadowed"}} -{{.value}} == nested value
+      -{{.bValue}} == value-of-b
+      -{{.someValue}} == 42
+      -{{.c}} == eval(c)
       Ellipsis inside component allows forwarding/spreading attributes of the component call
       to child elements. Only values that exist are forwarded (to allow forwarding optional attributes)
       <div b-value="{{with $dot}}{{.b}}{{end}}" c="eval(c)" value="{{with $dot}}{{$params.nested.value}}{{end}}"></div>
-      It allows allows spreading all attributes except some via `ne`: (all except value and bValue)
+      It allows allows spreading all attributes except some via `ne`: (all except value and bValue) 
       <div a="{{with $dot}}{{.a}}{{end}}" c="eval(c)" some-value="{{with $dot}}{{$someValue}}{{end}}"></div>
     {{end}}
   {{end}}
 </noscript>
 
 <noscript name="ellipsis-spread/test-ellipsis-spread/compiled:<x>">
-  {{$_x_params := "shadowing var from callsite (solved via namespacing)"}}
-  {{$_x_someValue := "shadowed"}}
-  -
-  {{.value}}
-  == nested value
-      -
-  {{.bValue}}
-  == value-of-b
-      -
-  {{.someValue}}
-  == 42
-      -
-  {{.c}}
-  == eval(c)
+  {{$_x_params := "shadowing var from callsite (solved via namespacing)"}}{{$_x_someValue := "shadowed"}} -{{.value}} == nested value
+      -{{.bValue}} == value-of-b
+      -{{.someValue}} == 42
+      -{{.c}} == eval(c)
       Ellipsis inside component allows forwarding/spreading attributes of the component call
       to child elements. Only values that exist are forwarded (to allow forwarding optional attributes)
   <div ...{{.value .bValue .c .undefined}}></div>
-  It allows allows spreading all attributes except some via `ne`: (all except value and bValue)
+  It allows allows spreading all attributes except some via `ne`: (all except value and bValue) 
   <div ...{{ne .value .bValue}}></div>
 </noscript>
 
@@ -63,30 +66,17 @@
 </noscript>
 
 <noscript name="ellipsis-spread/test-ellipsis-spread/executed">
-  
-  
-  Ellipsis on he component call allows concisely passing values by their name,
+   Ellipsis on he component call allows concisely passing values by their name,
     fields, nested fields and even variables.
   
-    
-      
-      
-      -
-      nested value
-      == nested value
-      -
-      value-of-b
-      == value-of-b
-      -
-      42
-      == 42
-      -
-      eval(c)
-      == eval(c)
+     -nested value == nested value
+      -value-of-b == value-of-b
+      -42 == 42
+      -eval(c) == eval(c)
       Ellipsis inside component allows forwarding/spreading attributes of the component call
       to child elements. Only values that exist are forwarded (to allow forwarding optional attributes)
       <div b-value="value-of-b" c="eval(c)" value="nested value"></div>
-      It allows allows spreading all attributes except some via `ne`: (all except value and bValue)
+      It allows allows spreading all attributes except some via `ne`: (all except value and bValue) 
       <div a="value-of-a" c="eval(c)" some-value="42"></div>
     
   

@@ -1,55 +1,32 @@
 <noscript name="slot-scope/test-slot-scope/nodes-to-html">
-  value of a from callsite scope (outside component/slot):
-  {{.a}}
-  == value-of-a
-  {{$var := "callsite scope"}}
+  value of a from callsite scope (outside component/slot): {{.a}} == value-of-a{{$var := "callsite scope"}}
   <x-component foo=foo-value>
     <slot name=a>
       accessing the callsite scope inside a slot:
-        - value:
-      {{.a}}
-      == value-of-a
-        - var:
-      {{$var}}
-      == "callsite scope"
+        - value: {{.a}} == value-of-a
+        - var:{{$var}} == "callsite scope"
     </slot>
   </x-component>
 </noscript>
 
 <noscript name="slot-scope/test-slot-scope/compiled">
-  value of a from callsite scope (outside component/slot):
-  {{.a}}
-  == value-of-a
-  {{$var := "callsite scope"}}
+  value of a from callsite scope (outside component/slot): {{.a}} == value-of-a{{$var := "callsite scope"}}
   {{with $dot := .}}
     {{with (dict "caller" "test-slot-scope" "slots" (list (dict "name" "a")) ("foo") ("foo-value"))}}
-      - the component params can be accessed:
-      {{.foo}}
-      == foo-value
-      - slots have access to the parent scope and vars are not shadowed
-      {{$_xComponent_var := "component scope"}}
-      slots.a:
+      - the component params can be accessed: {{.foo}} == foo-value
+      - slots have access to the parent scope and vars are not shadowed{{$_xComponent_var := "component scope"}} slots.a:
       {{with $dot}}
         accessing the callsite scope inside a slot:
-        - value:
-        {{.a}}
-        == value-of-a
-        - var:
-        {{$var}}
-        == "callsite scope"
+        - value: {{.a}} == value-of-a
+        - var:{{$var}} == "callsite scope"
       {{end}}
     {{end}}
   {{end}}
 </noscript>
 
 <noscript name="slot-scope/test-slot-scope/compiled:<x-component>">
-  - the component params can be accessed:
-  {{.foo}}
-  == foo-value
-      - slots have access to the parent scope and vars are not shadowed
-  {{$_xComponent_var := "component scope"}}
-  slots.a:
-  {{.slots.a}}
+  - the component params can be accessed: {{.foo}} == foo-value
+      - slots have access to the parent scope and vars are not shadowed{{$_xComponent_var := "component scope"}} slots.a:{{.slots.a}}
 </noscript>
 
 <noscript name="slot-scope/test-slot-scope/compiled:[assets]<x-component>">
@@ -57,26 +34,15 @@
 </noscript>
 
 <noscript name="slot-scope/test-slot-scope/executed">
-  value of a from callsite scope (outside component/slot):
-  value-of-a
-  == value-of-a
-  
+  value of a from callsite scope (outside component/slot): value-of-a == value-of-a
   
     
-      - the component params can be accessed:
-      foo-value
-      == foo-value
-      - slots have access to the parent scope and vars are not shadowed
-      
-      slots.a:
+      - the component params can be accessed: foo-value == foo-value
+      - slots have access to the parent scope and vars are not shadowed slots.a:
       
         accessing the callsite scope inside a slot:
-        - value:
-        value-of-a
-        == value-of-a
-        - var:
-        callsite scope
-        == "callsite scope"
+        - value: value-of-a == value-of-a
+        - var:callsite scope == "callsite scope"
       
     
   

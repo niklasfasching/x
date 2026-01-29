@@ -15,10 +15,20 @@
   </template>
 {{ end }}
 
+{{ define "<y>" }}
+  <template>
+    .={{ . }}
+  </template>
+{{ end }}
+
 {{ define "test-ellipsis-spread"  }}
   {{ $params := (dict "nested" (dict "value" "nested value")) }}
   {{ $someValue := 42 }}
   Ellipsis on he component call allows concisely passing values by their name,
   fields, nested fields and even variables.
   <x ...{{ $params.nested.value .a $someValue }} b-value={{.b}} c="eval(c)"/>
+{{ end }}
+
+{{ define "test-noop-ellipsis-spread"  }}
+  <y ...{{ . }}/>
 {{ end }}

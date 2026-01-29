@@ -8,8 +8,7 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "- the component params can be accessed:
-	",
+      "Text": "- the component params can be accessed: ",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -31,10 +30,8 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	== foo-value
-	    - slots have access to the parent scope and vars are not shadowed
-	",
+      "Text": " == foo-value
+	    - slots have access to the parent scope and vars are not shadowed",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null
@@ -56,9 +53,7 @@
     {
       "Type": 1,
       "Tag": "",
-      "Text": "
-	slots.a:
-	",
+      "Text": " slots.a:",
       "Attrs": null,
       "SelfClosing": false,
       "Children": null

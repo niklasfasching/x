@@ -8,7 +8,7 @@
       <x-component component=true class=" class" id=id bar=bar-value foo=foo-value>
         with component=true the component tag stays wrapped after inlining.
       Directives applied to the template get applied to the wrapper.
-      The `...` directive allows forwarding parameters.
+      The `...` directive allows forwarding parameters. 
         <div a="{{with $dot}}{{(print "with parent dot " .a)}}{{end}}" bar=bar-value baz=baz-value foo=foo-value></div>
       </x-component>
     {{end}}
@@ -19,7 +19,7 @@
   <x-component component=true ...{{.foo .bar}} class=" class" id=id>
     with component=true the component tag stays wrapped after inlining.
       Directives applied to the template get applied to the wrapper.
-      The `...` directive allows forwarding parameters.
+      The `...` directive allows forwarding parameters. 
     <div ...{{.foo .bar .baz .a}}></div>
   </x-component>
 </noscript>
@@ -30,7 +30,7 @@
       connectedCallback() {
        // ...
       }
-    })
+    }) 
   </script>
 </noscript>
 
@@ -40,7 +40,7 @@
       <x-component component=true class=" class" id=id bar=bar-value foo=foo-value>
         with component=true the component tag stays wrapped after inlining.
       Directives applied to the template get applied to the wrapper.
-      The `...` directive allows forwarding parameters.
+      The `...` directive allows forwarding parameters. 
         <div a="with parent dot value-of-a" bar=bar-value baz=baz-value foo=foo-value></div>
       </x-component>
     

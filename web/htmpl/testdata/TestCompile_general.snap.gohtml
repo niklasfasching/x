@@ -1,21 +1,19 @@
 <noscript name="general/test-x-component/nodes-to-html">
   <x-component static=static-value mixed="foo-{{.a}}-bar" dynamic="{{.a}}">
     <slot name=a other-field=value-of-other-field>
-      content of
+      content of 
       <b>
         slot a
       </b>
-      value of parent a:
-      {{.a}}
-      == value-of-a
+      value of parent a: {{.a}} == value-of-a
     </slot>
     <div>
-      remaining content of
+      remaining content of 
     </div>
     <p>
-      x-component at
+      x-component at 
     </p>
-    the callsite
+    the callsite 
   </x-component>
 </noscript>
 
@@ -24,55 +22,39 @@
     {{with (dict "caller" "test-x-component" "slots" (list (dict "name" "a" "other-field" "value-of-other-field")) ("static") ("static-value") ("mixed") ((print "foo-" .a "-bar")) ("dynamic") (.a))}}
       Each component must have a template; the html inside is what is inlined and rendered at each callsite.
       The attributes passed to the component are available as fields on dot, e.g.
-      - static attributes:
-      {{.static}}
-      == static-value
-      - mixed attributes: concatenated using print:
-      {{.mixed}}
-      == foo-value-of-a-bar
-      - dynamic attributes:
-      {{.dynamic}}
-      == value-of-a
+      - static attributes: {{.static}} == static-value
+      - mixed attributes: concatenated using print:{{.mixed}} == foo-value-of-a-bar
+      - dynamic attributes:{{.dynamic}} == value-of-a
   
-      In addition, the name of the caller
-      {{.caller}}
-      as well as slots slots from the call site are available.
+      In addition, the name of the caller{{.caller}} as well as slots slots from the call site are available.
       Slots are avaiable as both variables and elements:
       - Both named slots:
       slots.a:
       {{with $dot}}
-        content of
+        content of 
         <b>
           slot a
         </b>
-        value of parent a:
-        {{.a}}
-        == value-of-a
-      {{end}}
-      - And the rest:
+        value of parent a: {{.a}} == value-of-a
+      {{end}} - And the rest:
       slots.rest:
       {{with $dot}}
         <div>
-          remaining content of
+          remaining content of 
         </div>
         <p>
-          x-component at
+          x-component at 
         </p>
-        the callsite
-      {{end}}
-      range .slots:
+        the callsite 
+      {{end}} range .slots:
       {{range .slots}}
-        name:
-        {{.name}}
-        == a
-        other-field:
-        {{.otherField}}
-        == value-of-other-field
+        name:{{.name}} == a
+        other-field:{{.otherField}} == value-of-other-field
       {{end}}
       <div>
-        the attributes set on the component can also be statically forwarded using
+        the attributes set on the component can also be statically forwarded using 
         <code>
-          ...
+          ... 
         </code>
       </div>
     {{end}}
@@ -82,49 +64,33 @@
 <noscript name="general/test-x-component/compiled:<x-component>">
   Each component must have a template; the html inside is what is inlined and rendered at each callsite.
       The attributes passed to the component are available as fields on dot, e.g.
-      - static attributes:
-  {{.static}}
-  == static-value
-      - mixed attributes: concatenated using print:
-  {{.mixed}}
-  == foo-value-of-a-bar
-      - dynamic attributes:
-  {{.dynamic}}
-  == value-of-a
+      - static attributes: {{.static}} == static-value
+      - mixed attributes: concatenated using print:{{.mixed}} == foo-value-of-a-bar
+      - dynamic attributes:{{.dynamic}} == value-of-a
   
-      In addition, the name of the caller
-  {{.caller}}
-  as well as slots slots from the call site are available.
+      In addition, the name of the caller{{.caller}} as well as slots slots from the call site are available.
       Slots are avaiable as both variables and elements:
       - Both named slots:
-      slots.a:
-  {{.slots.a}}
-  - And the rest:
-      slots.rest:
-  {{.slots.rest}}
-  range .slots:
+      slots.a:{{.slots.a}} - And the rest:
+      slots.rest:{{.slots.rest}} range .slots:
   {{range .slots}}
-    name:
-    {{.name}}
-    == a
-        other-field:
-    {{.otherField}}
-    == value-of-other-field
+    name:{{.name}} == a
+        other-field:{{.otherField}} == value-of-other-field
   {{end}}
   <div ...{{.name .otherFieldo}}>
-    the attributes set on the component can also be statically forwarded using
+    the attributes set on the component can also be statically forwarded using 
     <code>
-      ...
+      ... 
     </code>
   </div>
 </noscript>
 
 <noscript name="general/test-x-component/compiled:[assets]<x-component>">
   <script>
-    some script
+    some script 
   </script>
   <style>
-    some style
+    some style 
   </style>
   something else
 </noscript>
@@ -134,55 +100,39 @@
     
       Each component must have a template; the html inside is what is inlined and rendered at each callsite.
       The attributes passed to the component are available as fields on dot, e.g.
-      - static attributes:
-      static-value
-      == static-value
-      - mixed attributes: concatenated using print:
-      foo-value-of-a-bar
-      == foo-value-of-a-bar
-      - dynamic attributes:
-      value-of-a
-      == value-of-a
+      - static attributes: static-value == static-value
+      - mixed attributes: concatenated using print:foo-value-of-a-bar == foo-value-of-a-bar
+      - dynamic attributes:value-of-a == value-of-a
   
-      In addition, the name of the caller
-      test-x-component
-      as well as slots slots from the call site are available.
+      In addition, the name of the callertest-x-component as well as slots slots from the call site are available.
       Slots are avaiable as both variables and elements:
       - Both named slots:
       slots.a:
       
-        content of
+        content of 
         <b>
           slot a
         </b>
-        value of parent a:
-        value-of-a
-        == value-of-a
-      
-      - And the rest:
+        value of parent a: value-of-a == value-of-a
+       - And the rest:
       slots.rest:
       
         <div>
-          remaining content of
+          remaining content of 
         </div>
         <p>
-          x-component at
+          x-component at 
         </p>
-        the callsite
+        the callsite 
+       range .slots:
       
-      range .slots:
-      
-        name:
-        a
-        == a
-        other-field:
-        value-of-other-field
-        == value-of-other-field
+        name:a == a
+        other-field:value-of-other-field == value-of-other-field
       
       <div>
-        the attributes set on the component can also be statically forwarded using
+        the attributes set on the component can also be statically forwarded using 
         <code>
-          ...
+          ... 
         </code>
       </div>
     

@@ -39,7 +39,7 @@
           "Text": "
 	  with component=true the component tag stays wrapped after inlining.
 	    Directives applied to the template get applied to the wrapper.
-	    The `...` directive allows forwarding parameters.
+	    The `...` directive allows forwarding parameters. 
 	  ",
           "Attrs": null,
           "SelfClosing": false,
@@ -87,7 +87,7 @@
 	    connectedCallback() {
 	     // ...
 	    }
-	  })
+	  }) 
 	",
           "Attrs": null,
           "SelfClosing": false,
