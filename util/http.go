@@ -1,11 +1,32 @@
 package util
 
 import (
+	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
 )
+
+func NewPublicDialer(dialer *net.Dialer) func(context.Context, string, string) (net.Conn, error) {
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			return nil, err
+		}
+		ips, err := net.DefaultResolver.LookupNetIP(ctx, "ip", host)
+		if err != nil {
+			return nil, err
+		}
+		for _, ip := range ips {
+			if !ip.IsGlobalUnicast() || ip.IsPrivate() {
+				return nil, fmt.Errorf("restricted ip: %v", ip)
+			}
+		}
+		return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].String(), port))
+	}
+}
 
 func HandleByteRange(r *http.Request, w http.ResponseWriter, size int64) (off, l int64, ok bool) {
 	if off, l, ok = ParseByteRange(r.Header.Get("Range"), size); !ok {

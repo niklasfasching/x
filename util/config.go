@@ -7,12 +7,12 @@ import (
 	"reflect"
 )
 
-func LoadConfig(c any) error {
+func LoadConfig(c any, allowUnset bool) error {
 	rt, rc := reflect.TypeOf(c).Elem(), reflect.ValueOf(c).Elem()
 	for i := 0; i < rt.NumField(); i++ {
 		rft := rt.Field(i)
 		s, ok := os.LookupEnv(rft.Name)
-		if !ok && !rc.Field(i).IsZero() {
+		if !ok && (allowUnset || !rc.Field(i).IsZero()) {
 			continue
 		} else if !ok {
 			return fmt.Errorf("failed to lookup field %q in env", rft.Name)
