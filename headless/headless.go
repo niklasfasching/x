@@ -147,6 +147,7 @@ func (h *H) Open(url string, f func(*Session) error) (*Session, error) {
 		bindings: map[string]reflect.Value{},
 		Err:      make(chan error),
 	}
+	s.Url = url
 	h.Lock()
 	h.sessions[ar.SessionId] = s
 	h.Unlock()
@@ -235,17 +236,17 @@ func (h *H) Close(s *Session) error {
 	return nil
 }
 
-func (h *H) Exec(method string, params, v interface{}) error {
+func (h *H) Exec(method string, params, v any) error {
 	return h.exec("", method, params, v)
 }
 
-func (h *H) exec(sessionID, method string, params, v interface{}) error {
+func (h *H) exec(sessionID, method string, params, v any) error {
 	h.Lock()
 	id, c := h.nextID, make(chan message, 1)
 	h.nextID++
 	h.pending[id] = c
 	h.Unlock()
-	m := map[string]interface{}{
+	m := map[string]any{
 		"method":    method,
 		"params":    params,
 		"id":        id,
@@ -265,7 +266,7 @@ func (h *H) exec(sessionID, method string, params, v interface{}) error {
 	}
 	r := <-c
 	if r.Error != nil {
-		e := map[string]interface{}{}
+		e := map[string]any{}
 		if err := json.Unmarshal(r.Error, &e); err != nil {
 			return fmt.Errorf("%s", string(r.Error))
 		}

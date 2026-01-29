@@ -25,7 +25,7 @@ var modulePathRegexp = regexp.MustCompile("^(./|/|https?://)")
 
 func (e ExitErr) Error() string { return fmt.Sprintf("exit code: %v", int(e)) }
 
-func Colorize(args []interface{}) string {
+func Colorize(args []any) string {
 	if len(args) == 0 {
 		return ""
 	}
@@ -84,7 +84,7 @@ func FormatException(m json.RawMessage) string {
 			Url                      string
 			Exception                struct {
 				Description string
-				Value       interface{}
+				Value       any
 			}
 		}
 	}{}

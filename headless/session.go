@@ -35,7 +35,7 @@ func (s *Session) HandleContext(ctx context.Context, method string, f any) {
 func (s *Session) Handle(method string, f any) func() {
 	fv := reflect.ValueOf(f)
 	if t := fv.Type(); t.NumIn() != 1 || t.NumOut() != 0 {
-		panic(fmt.Sprintf("handler func must be of type func(T)"))
+		panic(fmt.Sprintf("handler func must be of type func(T): %#v", f))
 	}
 	h := &Handler{fv, make(chan message, 10)}
 	go func() {
@@ -99,7 +99,7 @@ func (s *Session) eval(js string, id int, v any) error {
 	if err := s.Exec("Runtime.evaluate", params, &r); err != nil {
 		return err
 	}
-	if v == nil {
+	if v == nil || r.Result.Value == nil || string(r.Result.Value) == "null" {
 		return nil
 	}
 	return json.Unmarshal(r.Result.Value, v)
