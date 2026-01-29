@@ -90,10 +90,11 @@ func (h *H) Compile() (ts []*template.Template, err error) {
 			return nil, fmt.Errorf("failed to parse %s: %w", paths, err)
 		}
 		c := htmpl.NewCompiler(htmpl.ProcessDirectives)
-		if err := c.Compile(t); err != nil {
+		ht, err := c.Compile(t)
+		if err != nil {
 			return nil, fmt.Errorf("failed to compile %s: %w", paths, err)
 		}
-		ts = append(ts, t)
+		ts = append(ts, ht.Template)
 	}
 	return ts, nil
 }

@@ -3,6 +3,7 @@ package web
 import (
 	"crypto/subtle"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"log"
@@ -16,6 +17,7 @@ import (
 )
 
 type ErrHandler func(http.ResponseWriter, *http.Request) (int, error)
+type JSONHandler func(http.ResponseWriter, *http.Request) (int, any)
 
 type util struct{}
 
@@ -51,6 +53,24 @@ func (f ErrHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if code, err := f(w, r); err != nil {
 		http.Error(w, err.Error(), code)
 	}
+}
+
+func (f JSONHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	code, v := f(w, r)
+	if code == 0 {
+		return
+	} else if code >= 400 {
+		v = map[string]any{"err": v.(error).Error()}
+	} else {
+		v = map[string]any{"result": v}
+	}
+	bs, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(bs)
 }
 
 func AssetHandler(prefix string, dynamic bool) http.Handler {
