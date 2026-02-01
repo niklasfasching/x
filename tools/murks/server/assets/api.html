@@ -163,15 +163,15 @@
       const queue = [...missing];
       const worker = async () => {
         while (queue.length) {
-          const name = queue.shift();
-          if (!name) continue;
-          let def = this.assetDefs[name], assetBlob;
+          const id = queue.shift();
+          if (!id) continue;
+          let def = this.assetDefs[id], assetBlob;
           for (let i of [1, 2, 3]) {
             try {
               assetBlob = await g.generate(def.type, def.prompt, def);
               break
             } catch (err) {
-              this.toast(`Asset ${name} failed: ${err} (attempt ${i}/3)`);
+              this.toast(`Asset ${id} failed: ${err} (attempt ${i}/3)`);
               if (i === 3) throw err;
             }
           }
@@ -180,9 +180,7 @@
             r.onload = () => res(r.result.split(',')[1]), r.onerror = rej;
             r.readAsDataURL(assetBlob);
           });
-          await this.req("assets", name, {
-            name, data, prompt: def.prompt, mime: assetBlob.type,
-          });
+          await this.req("assets", id, {data, type: def.type, prompt: def.prompt});
           completed++;
           updateProgress();
         }
@@ -221,7 +219,7 @@
 
     async generate(type, prompt, options = {}) {
       if (type === "image") return this.image(prompt, options);
-      if (type === "tts") return this.speech(prompt, options);
+      if (type === "audio") return this.speech(prompt, options);
       const text = await this.text(prompt, options);
       return new Blob([text], {type: options.responseMimeType || "text/plain"});
     }

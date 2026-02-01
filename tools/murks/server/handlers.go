@@ -544,11 +544,13 @@ func (a *API) HandleAssets(w http.ResponseWriter, r *http.Request) (int, error) 
 			return 500, err
 		}
 		asset, err := sq.QueryOne[GeneratedAsset](db,
-			"SELECT mime, data FROM generatedassets WHERE id = ?", name)
+			"SELECT * FROM generatedassets WHERE id = ?", name)
 		if err != nil {
 			return 404, fmt.Errorf("asset %q not found: %w", name, err)
 		}
-		w.Header().Set("Content-Type", asset.Mime)
+		types := map[string]string{"image": "image/webp", "audio": "audio/wav"}
+		mime := cmp.Or(types[asset.Type], "text/plain")
+		w.Header().Set("Content-Type", mime)
 		w.Write(asset.Data)
 		return 0, nil
 	}

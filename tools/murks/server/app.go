@@ -50,7 +50,6 @@ type AssetDef struct {
 
 type GeneratedAsset struct {
 	ID   string `sq:"TEXT PRIMARY KEY"`
-	Mime string
 	Data []byte
 	AssetDef
 }

@@ -86,6 +86,7 @@ const nav = api.router({
 ## 4. Advanced Features
 
 ### AI-Generated Assets
+Supported types: `image`, `audio` (tts model), `data`
 ```javascript
 window.api = new API("{{.Token}}", {
   // ...
@@ -103,7 +104,7 @@ window.api = new API("{{.Token}}", {
     },
     "welcome.wav": {
       prompt: "Hello and welcome to our app!",
-      type: "tts",
+      type: "audio",
       voiceName: "Kore"
     }
   }
