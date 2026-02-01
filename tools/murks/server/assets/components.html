@@ -17,7 +17,7 @@
     <div class="entry stack gap-3 p-3 border rounded bg-white shadow-sm {{if eq .app.Status 0}}bg-warn-dim{{end}}{{if eq .app.Status 1}} under-construction{{end}}">
       {{ if ne .app.Status 0 }}
         <div class="cluster between">
-          <a href="{{api.URL .app.Slug}}" class="cluster" style="min-width: 0; text-decoration: none;">
+          <a href="{{api.URL .app.Slug}}" class="cluster entry-link">
             <div class="frame icon rounded border bg-white p-1">
               <img src="{{api.URL .app.Slug}}/assets/icon.svg" loading="lazy" alt="">
             </div>
@@ -38,21 +38,21 @@
             </button>
             <button onclick="toggleStatus('{{api.URL .app.Slug}}', {{.app.Status}})"
                     class="toggle active {{if eq .app.Status 2}}ok{{else}}warn{{end}}"
-                    title="{{if ne .app.Status 2}}Under Construction - Click to mark as live{{else}}Live - Click to enable construction mode{{end}}">
+                    title="{{if ne .app.Status 2}}Under Construction - Click to enable data protection{{else}}Live - Click to enable construction mode{{end}}">
               {{if ne .app.Status 2}}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
               {{else}}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>
               {{end}}
             </button>
-            <button onclick="openOptions({id: '{{.app.ID}}', slug: '{{.app.Slug}}', name: '{{.app.Name}}', url: '{{api.URL .app.Slug}}', chatUrl: '{{.app.ChatURL}}', pub: {{.app.IsPublic}}})" class="btn ghost" title="Options">
+            <button onclick="openOptions({id: '{{.app.ID}}', slug: '{{.app.Slug}}', name: '{{.app.Name}}', url: '{{api.URL .app.Slug}}', chatUrl: '{{.app.ChatURL}}', pub: {{.app.IsPublic}}}, 'owner')" class="btn ghost" title="Options">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
             </button>
           </div>
         </div>
       {{ else }}
         <div class="cluster between">
-          <a href="{{api.URL .app.Slug}}" class="cluster" style="min-width: 0; text-decoration: none;">
+          <a href="{{api.URL .app.Slug}}" class="cluster entry-link">
             <div class="frame icon rounded border bg-white p-1">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
             </div>
@@ -115,7 +115,7 @@
 {{ define "<entry-shared>" }}
   <template>
     <div class="cluster between p-3 border-b">
-      <a href="{{api.URL .app.Slug}}" class="cluster" style="min-width: 0; text-decoration: none;">
+      <a href="{{api.URL .app.Slug}}" class="cluster entry-link">
         <div class="frame icon rounded border bg-white p-1">
           <img src="{{api.URL .app.Slug}}/assets/icon.svg" loading="lazy" alt="">
         </div>
@@ -134,6 +134,31 @@
         <button onclick="deleteApp('{{api.URL .app.Slug}}')" class="btn ghost err" title="Remove">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
         </button>
+      </div>
+    </div>
+  </template>
+{{ end }}
+
+
+{{ define "<entry-maintainer>" }}
+  <template>
+    <div class="entry stack gap-3 p-3 border rounded bg-white shadow-sm">
+      <div class="cluster between">
+        <a href="{{api.URL .app.Slug}}" class="cluster entry-link">
+          <div class="frame icon rounded border bg-white p-1">
+            <img src="{{api.URL .app.Slug}}/assets/icon.svg" loading="lazy" alt="">
+          </div>
+          <div class="stack gap-1" style="min-width: 0;">
+            <b class="text-sm ellipsis">{{.app.Name}} <span class="text-gray" style="font-weight: normal;">@{{.app.Owner}}</span></b>
+            <span class="mono text-xs text-gray">{{ .app.Slug }}.{{api.Domain}}</span>
+          </div>
+        </a>
+
+        <div class="cluster gap-1">
+          <button onclick="openOptions({id: '{{.app.ID}}', slug: '{{.app.Slug}}', name: '{{.app.Name}}', url: '{{api.URL .app.Slug}}', chatUrl: '{{.app.ChatURL}}', pub: {{.app.IsPublic}}, owner: '{{.app.Owner}}'}, 'maintainer')" class="btn ghost" title="Options">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+          </button>
+        </div>
       </div>
     </div>
   </template>
@@ -209,14 +234,23 @@
         }
       }
     }
+    .bottom-sheet [data-for] { display: none; }
+    .bottom-sheet[data-role="owner"] [data-for~="owner"],
+    .bottom-sheet[data-role="maintainer"] [data-for~="maintainer"] { display: flex; }
   </style>
   <script>
-  function openOptions(app, lvl) {
+  function openOptions(app, role) {
     window._CURRENT_APP = app;
-    document.getElementById('btn-invite').style.display = app.pub ? 'flex' : 'none';
-    document.getElementById('chat-existing').style.display = app.chatUrl ? 'block' : 'none';
-    document.getElementById('chat-missing').style.display = app.chatUrl ? 'none' : 'block';
-    document.getElementById('app-sheet').classList.add('open');
+    const sheet = document.getElementById('app-sheet');
+    sheet.dataset.role = role;
+    sheet.querySelector('[data-section="gemini"]').hidden = (role === 'maintainer');
+    sheet.querySelector('[data-section="github"]').hidden = (role !== 'maintainer');
+    if (role === 'maintainer') sheet.querySelector('[data-section="github"] a').href =
+      `https://github.com/{{api.DeployRepo}}/issues/new?title=[${encodeURIComponent(app.slug)}]`;
+    sheet.querySelector('[data-action="chat-existing"]').hidden = !app.chatUrl;
+    sheet.querySelector('[data-action="chat-missing"]').hidden = !!app.chatUrl;
+    sheet.querySelector('[data-action="invite"]').hidden = (role === 'owner' && !app.pub);
+    sheet.classList.add('open');
     document.getElementById('sheet-overlay').classList.add('open');
   }
   function closeOptions() {
@@ -228,14 +262,20 @@
     const msg = `Enter the new link for "[${a.slug}].{{api.Domain}}":`;
     const s = prompt(msg, a.slug);
     if (!s || s === a.slug) return;
-    await api(`${a.url}/api/rename?slug=${encodeURIComponent(s)}`);
+    await api(`${a.url}/api/update?slug=${encodeURIComponent(s)}`);
     location.reload();
   }
   async function renameAppName() {
     const a = window._CURRENT_APP;
     const s = prompt(`Enter new name for "${a.name}":`, a.name);
     if (!s || s === a.name) return;
-    await api(`${a.url}/api/rename?name=${encodeURIComponent(s)}`);
+    await api(`${a.url}/api/update?name=${encodeURIComponent(s)}`);
+    location.reload();
+  }
+  async function toggleGitHub() {
+    const a = window._CURRENT_APP;
+    if (!confirm('Deploy to GitHub? This will transfer ownership to the deploy repo.')) return;
+    await api(`${a.url}/api/toggle-github`);
     location.reload();
   }
   </script>
@@ -244,64 +284,76 @@
     <div id="app-sheet" class="bottom-sheet stack p-0">
       <div class="sheet-handle"></div>
       <div class="stack gap-1 p-3">
-        <div id="chat-existing">
-          <button class="menu-item" title="Open Gemini Chat" onclick="window.open(window._CURRENT_APP.chatUrl, '_blank'); closeOptions()">
-            Open Gemini Chat
-          </button>
-        </div>
-        <div id="chat-missing">
-          <div class="text-xs bold text-gray mb-2">Link to Gemini</div>
-          <div class="sidebar" style="--side-w: 120px; --gap: 8px;">
-            <button class="btn secondary stack gap-1" onclick="const a = window._CURRENT_APP; copyPrompt(a.id, '', a.url, 'Copied Code!');">
-              <span class="text-lg bold" style="opacity: 0.2;">1</span>
-              <b>Copy Code</b>
-            </button>
-            <button class="btn secondary stack gap-1" onclick="window.open('https://gemini.google.com', '_blank'); closeOptions()">
-              <span class="text-lg bold" style="opacity: 0.2;">2</span>
-              <b>Open Gemini</b>
+        <div data-section="gemini" class="stack gap-1">
+          <div data-action="chat-existing">
+            <button class="menu-item" title="Open Gemini Chat" onclick="window.open(window._CURRENT_APP.chatUrl, '_blank'); closeOptions()">
+              Open Gemini Chat
             </button>
           </div>
-        </div>
-        <div class="border-b my-2"></div>
-        <div class="text-xs bold text-gray mb-2">AI Workflow</div>
-        <div class="cluster" style="--gap: 8px;">
-          <button class="btn secondary stack gap-1" style="flex: 1; min-width: 80px;" title="Copy Build Prompt"
-                  onclick="const a = window._CURRENT_APP; copyPrompt(a.id, '', '', 'Copied!'); closeOptions()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            <b>Prompt</b>
-          </button>
-          <button class="btn secondary stack gap-1" style="flex: 1; min-width: 80px;" title="Copy Prompt and HTML"
-                  onclick="const a = window._CURRENT_APP; copyPrompt(a.id, '', a.url, 'Copied!'); closeOptions()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-            <b>Both</b>
-          </button>
-          <button class="btn secondary stack gap-1" style="flex: 1; min-width: 80px;" title="Copy App HTML"
-                  onclick="const a = window._CURRENT_APP; copyHTML(a.url); closeOptions()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-            <b>HTML</b>
-          </button>
-          {{ if .isadmin }}
-            <button class="btn secondary stack gap-1" style="flex: 1; min-width: 80px;" title="Copy Raw HTML" onclick="const a = window._CURRENT_APP; copyRawHTML(a.url); closeOptions()">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
-              <b>Raw</b>
+          <div data-action="chat-missing">
+            <div class="text-xs bold text-gray mb-2">Link to Gemini</div>
+            <div class="sidebar" style="--side-w: 120px; --gap: 8px;">
+              <button class="btn secondary stack gap-1" onclick="const a = window._CURRENT_APP; copyPrompt(a.id, '', a.url, 'Copied Code!');">
+                <span class="text-lg bold" style="opacity: 0.2;">1</span>
+                <b>Copy Code</b>
+              </button>
+              <button class="btn secondary stack gap-1" onclick="window.open('https://gemini.google.com', '_blank'); closeOptions()">
+                <span class="text-lg bold" style="opacity: 0.2;">2</span>
+                <b>Open Gemini</b>
+              </button>
+            </div>
+          </div>
+          <div class="border-b my-2"></div>
+          <div class="text-xs bold text-gray mb-2">AI Workflow</div>
+          <div class="cluster" style="--gap: 8px;">
+            <button class="btn secondary stack gap-1" style="flex: 1; min-width: 80px;" title="Copy Build Prompt"
+                    onclick="const a = window._CURRENT_APP; copyPrompt(a.id, '', '', 'Copied!'); closeOptions()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              <b>Prompt</b>
             </button>
-          {{ end }}
+            <button class="btn secondary stack gap-1" style="flex: 1; min-width: 80px;" title="Copy Prompt and HTML"
+                    onclick="const a = window._CURRENT_APP; copyPrompt(a.id, '', a.url, 'Copied!'); closeOptions()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              <b>Both</b>
+            </button>
+            <button class="btn secondary stack gap-1" style="flex: 1; min-width: 80px;" title="Copy App HTML"
+                    onclick="const a = window._CURRENT_APP; copyHTML(a.url); closeOptions()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+              <b>HTML</b>
+            </button>
+            {{ if .isadmin }}
+              <button class="btn secondary stack gap-1" style="flex: 1; min-width: 80px;" title="Copy Raw HTML" onclick="const a = window._CURRENT_APP; copyRawHTML(a.url); closeOptions()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+                <b>Raw</b>
+              </button>
+            {{ end }}
+          </div>
+          <div class="border-b my-2"></div>
         </div>
-        <div class="border-b my-2"></div>
-        <button id="btn-rename-name" class="menu-item" style="flex: 1;"
+        <div data-section="github" hidden>
+          <a class="menu-item" target="_blank" onclick="closeOptions()">
+            New GitHub Issue
+          </a>
+          <div class="border-b my-2"></div>
+        </div>
+        <button data-for="owner maintainer" class="menu-item" style="flex: 1;"
                 title="Rename Name" onclick="renameAppName(); closeOptions()">
           Change Name
         </button>
-        <button id="btn-rename" class="menu-item" style="flex: 1;" title="Rename Slug"
+        <button data-for="owner maintainer" class="menu-item" style="flex: 1;" title="Rename Slug"
                 onclick="renameApp(); closeOptions()">
           Change Domain
         </button>
-        <button id="btn-invite" class="menu-item" title="Copy Invite Link"
+        <button data-action="invite" data-for="owner maintainer" class="menu-item" title="Copy Invite Link"
                 onclick="copyInvite(window._CURRENT_APP.url); closeOptions()">
           Copy Invite Link
         </button>
+        <button data-for="owner maintainer" class="menu-item" title="Deploy to GitHub"
+                onclick="toggleGitHub(); closeOptions()">
+          Deploy to GitHub
+        </button>
         <div class="border-b my-2"></div>
-        <button id="btn-delete" class="menu-item danger" title="Delete App"
+        <button data-for="owner maintainer" class="menu-item danger" title="Delete App"
                 onclick="const a = window._CURRENT_APP; deleteApp(a.url); closeOptions()">
           Delete App
         </button>
@@ -349,7 +401,6 @@
     </div>
   </layout>
 {{ end }}
-e
 
 {{ define "index" }}
   <layout user={{ .User }} name={{ .Name }} isadmin={{ .isadmin }}>
@@ -362,24 +413,28 @@ e
     {{ end }}
     <div id="list" class="stack gap-4" style="width: min(600px, 100%);">
       {{ if .Private }}
-        <h3 class="text-xs bold text-gray px-3"
-            style="text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1em;">
+        <h3 class="text-xs bold text-gray px-3 section-header">
           Personal (Private)</h3>
         {{ range .Private }}
           <entry-own app={{ . }} />
         {{ end }}
       {{ end }}
       {{ if .Public }}
-        <h3 class="text-xs bold text-gray px-3"
-            style="text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1em;">
+        <h3 class="text-xs bold text-gray px-3 section-header">
           Personal (Public)</h3>
         {{ range .Public }}
           <entry-own app={{ . }} />
         {{ end }}
       {{ end }}
+      {{ if .Maintainer }}
+        <h3 class="text-xs bold text-gray px-3 section-header">
+          Maintainer</h3>
+        {{ range .Maintainer }}
+          <entry-maintainer app={{ . }} />
+        {{ end }}
+      {{ end }}
       {{ if .Community }}
-        <h3 class="text-xs bold text-gray px-3"
-            style="text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1em;">
+        <h3 class="text-xs bold text-gray px-3 section-header">
           Community</h3>
         {{ range .Community }}
           <entry-shared app={{ . }} />
@@ -421,7 +476,7 @@ e
       if (!id && !n) return;
       const v = await api(`/api/prompt?id=${id||''}&name=${encodeURIComponent(n||'')}`);
       if (!id) { location.reload(); return; }
-      let txt = v.result;
+      let txt = v.result.prompt;
       if (appURL) {
         const r = await fetch(appURL, {credentials: 'include'});
         if (r.ok) txt = (await r.text()) + "\n\n" + txt;
@@ -456,7 +511,7 @@ e
     async function toggleStatus(url, currentStatus) {
       const warning =
         currentStatus !== 2 ?
-        `Mark App as Finished?
+        `Ennable Data Protection Mode?
        This prevents the AI from accidentally deleting existing data
        (dropping tables/columns).` :
         `Enable Construction Mode?

@@ -39,6 +39,7 @@
      cursor: pointer;
      padding: 0;
    }
+   [hidden] { display: none !important; }
   </style>
 {{ end }}
 
@@ -264,6 +265,10 @@
      width: min(600px, 100% - var(--s-4));
      margin-inline: auto;
    }
+
+   .section-header { text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1em; }
+   .entry-link { min-width: 0; text-decoration: none; }
+   .my-2 { margin-block: var(--s-2); }
   </style>
 {{ end }}
 

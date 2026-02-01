@@ -65,7 +65,7 @@ func NewHarness(t *testing.T, isIntegrationTest bool) H {
 }
 
 func (h H) CreateApp(userID string, x App) App {
-	appID, _, err := h.NewPrompt(h.Context(), userID, "", cmp.Or(x.Name, "app"))
+	appID, _, _, err := h.NewPrompt(h.Context(), userID, "", cmp.Or(x.Name, "app"))
 	if err != nil {
 		h.Fatalf("failed to create prompt (and init app): %v", err)
 	}
@@ -89,7 +89,7 @@ func (h H) CreateApp(userID string, x App) App {
 }
 
 func (h H) DeployApp(userID string, x App) App {
-	appID, _, err := h.NewPrompt(h.Context(), userID, x.ID, cmp.Or(x.Name, "app"))
+	appID, _, _, err := h.NewPrompt(h.Context(), userID, x.ID, cmp.Or(x.Name, "app"))
 	if err != nil {
 		h.Fatalf("failed to create prompt (and init app): %v", err)
 	}

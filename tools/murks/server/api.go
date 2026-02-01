@@ -47,6 +47,7 @@ type Config struct {
 	AppSecret, TelegramBotToken string
 	TelegramBotName             string
 	BackupRepo, BackupKey       string
+	DeployRepo, DeployKey       string
 	BackupFreq, TokenTTL        time.Duration
 	DataDir, DBName             string
 	TelegramAdminUsers          []string
@@ -121,7 +122,7 @@ func Start(c Config) error {
 	}
 	if a.IsDev() {
 		x, qErr := sq.QueryOne[App](a.DB, "SELECT ID FROM apps WHERE Slug = 'debug'")
-		id, _, pErr := a.NewPrompt(context.Background(), "dev", x.ID, "debug")
+		id, _, _, pErr := a.NewPrompt(context.Background(), "dev", x.ID, "debug")
 		if err := errors.Join(qErr, pErr); err != nil {
 			return err
 		}

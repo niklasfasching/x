@@ -38,7 +38,7 @@ type App struct {
 	Status                  Status
 	IsPublic                bool
 	CreatedAt, UpdatedAt    time.Time `sq:"AUTO"`
-	Users                   []string
+	Users                   map[string]Level
 	VAPIDKey                string
 	Subscriptions           []push.Sub
 	AssetDefs               map[string]AssetDef
@@ -86,6 +86,7 @@ const (
 	LvlNone Level = iota
 	LvlPublic
 	LvlUser
+	LvlMaintainer
 	LvlOwner
 )
 
@@ -99,13 +100,16 @@ const (
 var prompt string
 var promptTemplate = textTemplate.Must(textTemplate.New("prompt").Parse(prompt))
 
-func (a *API) NewPrompt(ctx context.Context, owner, id, name string) (string, string, error) {
+func (a *API) NewPrompt(ctx context.Context, owner, id, name string) (string, string, string, error) {
 	if id == "" {
 		s := slug(name)
+		if len(s) == 0 {
+			return "", "", "", fmt.Errorf("empty slug")
+		}
 		id = fmt.Sprintf("%x", rand.Uint64())
 		wp, err := push.New(a.Email, push.GeneratePrivateKey())
 		if err != nil {
-			return "", "", err
+			return "", "", "", err
 		}
 		_, err = a.apps.Insert("", App{
 			ID:       id,
@@ -116,34 +120,33 @@ func (a *API) NewPrompt(ctx context.Context, owner, id, name string) (string, st
 			Status:   StatusDraft,
 		})
 		if err != nil {
-			return "", "", fmt.Errorf("app %q/%q not available: %w", id, s, err)
+			return "", "", "", fmt.Errorf("app %q/%q not available: %w", id, s, err)
 		}
 	}
 	x, err := sq.QueryOne[App](a.DB, "SELECT VAPIDKey FROM apps WHERE ID = ? AND Owner = ?",
 		id, owner)
 	if err != nil {
-		return "", "", fmt.Errorf("app %q not found: %w", id, err)
+		return "", "", "", fmt.Errorf("app %q not found: %w", id, err)
 	}
-	w := &strings.Builder{}
+	w, token := &strings.Builder{}, a.Sign(User{ID: owner, AppID: id}, 100*365*24*time.Hour)
 	err = promptTemplate.Lookup("prompt").Execute(w, map[string]any{
 		"Name":     "prompt",
 		"ID":       id,
 		"URL":      a.URL(""),
-		"Token":    a.Sign(User{ID: owner, AppID: id}, 100*365*24*time.Hour),
+		"Token":    token,
 		"VAPIDKey": push.PublicKey(x.VAPIDKey),
 	})
-	return id, w.String(), err
+	return id, token, w.String(), err
 }
 
 func (a *API) UpdateApp(x App) error {
 	if strings.Contains(x.HTML, "PAT_") {
 		return fmt.Errorf("app HTML must not contain PAT token")
 	}
-	y, err := sq.QueryOne[App](a.DB, "SELECT ID, IsPublic, Users FROM apps WHERE ID = ?", x.ID)
+	y, err := sq.QueryOne[App](a.DB, "SELECT ID, IsPublic FROM apps WHERE ID = ?", x.ID)
 	if err != nil {
 		return err
 	}
-	x.Users = slices.Compact(slices.Sorted(slices.Values(append(x.Users, y.Users...))))
 	x.Status, x.IsPublic = cmp.Or(x.Status, StatusDev), y.IsPublic || x.IsPublic
 	return a.apps.Update(x,
 		"Status", "IsPublic", "Logo", "HTML", "JS", "ChatID", "Name",
@@ -420,8 +423,8 @@ func (a *API) getLevel(u User, appID string) Level {
 	if u.ID == x.Owner {
 		return LvlOwner
 	}
-	if slices.Contains(x.Users, u.ID) {
-		return LvlUser
+	if lvl, ok := x.Users[u.ID]; ok {
+		return lvl
 	}
 	if x.IsPublic {
 		return LvlPublic

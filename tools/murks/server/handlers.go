@@ -11,12 +11,14 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/niklasfasching/x/git"
 	"github.com/niklasfasching/x/ops"
 	"github.com/niklasfasching/x/soup"
 	"github.com/niklasfasching/x/sq"
@@ -80,11 +82,11 @@ func (a *API) HandleAPI(w http.ResponseWriter, r *http.Request) (int, any) {
 				return 401, fmt.Errorf("unauthorized for app %v %q: %v %v", id, name, req.User, lvl)
 			}
 		}
-		_, p, err := a.NewPrompt(r.Context(), req.User.ID, id, name)
+		appID, token, p, err := a.NewPrompt(r.Context(), req.User.ID, id, name)
 		if err != nil {
 			return 500, err
 		}
-		return 200, p
+		return 200, map[string]any{"id": appID, "token": token, "prompt": p}
 	case "remix":
 		v := struct{ Id, SrcSlug string }{}
 		if err := req.Decode(&v); err != nil {
@@ -120,8 +122,8 @@ func (a *API) HandleAPI(w http.ResponseWriter, r *http.Request) (int, any) {
 }
 
 func (a *API) handleUpdate(req *Req) (int, any) {
-	if req.Level < LvlOwner {
-		return 401, req.AuthError(LvlOwner, "update app")
+	if req.Level < LvlMaintainer {
+		return 401, req.AuthError(LvlMaintainer, "update app")
 	}
 	app, err := req.App("ID, IsPublic, Status")
 	if err != nil {
@@ -154,8 +156,8 @@ func (a *API) handleUpdate(req *Req) (int, any) {
 }
 
 func (a *API) handleInvite(req *Req) (int, any) {
-	if req.Level < LvlOwner {
-		return 401, req.AuthError(LvlOwner, "create invite")
+	if req.Level < LvlMaintainer {
+		return 401, req.AuthError(LvlMaintainer, "create invite")
 	}
 	code := a.SignClaim(map[string]any{"op": "invite", "app": req.AppID}, a.TokenTTL)
 	return 200, fmt.Sprintf("%s/invite?code=%s", a.URL(""), code)
@@ -334,9 +336,9 @@ func (a *API) handleDelete(req *Req) (int, any) {
 		if err != nil {
 			return 500, err
 		}
-		x.Users = slices.DeleteFunc(x.Users, func(id string) bool { return id == req.User.ID })
+		delete(x.Users, req.User.ID)
 		return 200, a.apps.Update(x, "Users")
-	} else if req.Level == LvlOwner {
+	} else if req.Level >= LvlMaintainer {
 		ctx := req.Context()
 		if _, _, err := sq.ExecContext(ctx, a.DB, "DELETE FROM apps WHERE ID = ?", req.AppID); err != nil {
 			return 500, err
@@ -384,6 +386,57 @@ func (a *API) handleFetch(req *Req) (int, any) {
 	return 200, map[string]any{"status": status, "headers": headers, "body": body}
 }
 
+func (a *API) handleToggleGitHub(req *Req) (int, any) {
+	if req.Level < LvlMaintainer {
+		return 401, req.AuthError(LvlMaintainer, "toggle GitHub deployment")
+	}
+	x, err := req.App("*")
+	if err != nil {
+		return 500, err
+	}
+	appDir := fmt.Sprintf("apps/%s_%s", x.ID, x.Slug)
+	if x.Owner == a.DeployRepo {
+		err = git.PushGitHub(path.Join(a.DeployRepo, appDir), "main", []byte(a.DeployKey),
+			func(c *git.Commit) error { return nil })
+		if err != nil {
+			return 500, fmt.Errorf("failed to clear GitHub: %w", err)
+		}
+		x.Owner, x.ChatID = req.User.ID, ""
+		delete(x.Users, req.User.ID)
+		if err := a.apps.Update(x, "Owner", "Users", "ChatID"); err != nil {
+			return 500, err
+		}
+		return 200, "ok"
+	}
+	err = git.PushGitHub(path.Join(a.DeployRepo, appDir), "main", []byte(a.DeployKey),
+		func(c *git.Commit) error {
+			c.Add("index.html", []byte(x.HTML))
+			configBS, _ := json.MarshalIndent(map[string]any{
+				"Name":      x.Name,
+				"ShortName": x.ShortName,
+				"Logo":      x.Logo,
+				"Schema":    x.Schema,
+				"Query":     x.Query,
+				"Exec":      x.Exec,
+			}, "", "  ")
+			c.Add(path.Join(appDir, "config.json"), configBS)
+			c.Add(path.Join(appDir, "index.html"), []byte(x.HTML))
+			return nil
+		})
+	if err != nil {
+		return 500, fmt.Errorf("failed to push to GitHub: %w", err)
+	}
+	if x.Users == nil {
+		x.Users = map[string]Level{}
+	}
+	x.Users[x.Owner] = LvlMaintainer
+	x.Owner = a.DeployRepo
+	if err := a.apps.Update(x, "Owner", "Users"); err != nil {
+		return 500, err
+	}
+	return 200, "ok"
+}
+
 func (a *API) HandleAppAPI(w http.ResponseWriter, r *http.Request) (int, any) {
 	req, cmd, action := a.Req(r), r.PathValue("cmd"), r.PathValue("action")
 	slog.DebugContext(r.Context(), "HandleAPI", "user", req.User, "cmd", cmd,
@@ -395,6 +448,8 @@ func (a *API) HandleAppAPI(w http.ResponseWriter, r *http.Request) (int, any) {
 		return a.handleAssets(req, action)
 	case "deploy":
 		return a.handleDeploy(req)
+	case "toggle-github":
+		return a.handleToggleGitHub(req)
 	case "invite":
 		return a.handleInvite(req)
 	case "push":
@@ -424,34 +479,37 @@ func (a *API) HandleIndex(w http.ResponseWriter, r *http.Request) (int, error) {
 		SELECT ID, Slug, ChatID, Name, Owner, Users, IsPublic, Status
 		FROM apps
 		WHERE ? AND
-              (Owner = ? OR EXISTS (SELECT 1 FROM json_each(Users) WHERE value = ?))
+              (Owner = ? OR json_extract(Users, '$."' || ? || '"') IS NOT NULL)
 		ORDER BY CreatedAt DESC`, ok, u.ID, u.ID)
 	if err != nil {
 		return 500, err
 	}
-	private, public, community := []App{}, []App{}, []App{}
+	private, public, maintainer, community := []App{}, []App{}, []App{}, []App{}
 	for _, x := range xs {
-		if x.Owner == u.ID {
-			if x.IsPublic {
-				public = append(public, x)
-			} else {
-				private = append(private, x)
-			}
-		} else {
+		switch lvl := a.getLevel(u, x.ID); {
+		case lvl == LvlOwner && !x.IsPublic:
+			private = append(private, x)
+		case lvl == LvlOwner:
+			public = append(public, x)
+		case lvl == LvlMaintainer:
+			maintainer = append(maintainer, x)
+		default:
 			community = append(community, x)
 		}
 	}
 	ops.Metrics.Gauge("apps_displayed,type=private", float64(len(private)))
 	ops.Metrics.Gauge("apps_displayed,type=public", float64(len(public)))
+	ops.Metrics.Gauge("apps_displayed,type=maintainer", float64(len(maintainer)))
 	ops.Metrics.Gauge("apps_displayed,type=community", float64(len(community)))
 	w.Header().Set("Content-Type", "text/html")
 	return 0, a.Render(r.Context(), w, "index", map[string]any{
-		"Name":      "index",
-		"User":      u.ID,
-		"isadmin":   a.IsAdmin(u.ID),
-		"Private":   private,
-		"Public":    public,
-		"Community": community,
+		"Name":       "index",
+		"User":       u.ID,
+		"isadmin":    a.IsAdmin(u.ID),
+		"Private":    private,
+		"Public":     public,
+		"Maintainer": maintainer,
+		"Community":  community,
 	})
 }
 
@@ -686,8 +744,11 @@ func (a *API) ClaimHandler(w http.ResponseWriter, r *http.Request) (int, error) 
 				m["app"])
 			if err != nil {
 				return 404, err
-			} else if x.Owner != u.ID {
-				x.Users = slices.Compact(slices.Sorted(slices.Values(append(x.Users, u.ID))))
+			} else if x.Users == nil {
+				x.Users = map[string]Level{}
+			}
+			if _, ok := x.Users[u.ID]; !ok && u.ID != x.Owner {
+				x.Users[u.ID] = LvlUser
 				if err := a.apps.Update(x, "Users"); err != nil {
 					return 500, err
 				}
