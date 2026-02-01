@@ -14,7 +14,6 @@
         const handler = routes[fullPath] || routes['/' + first] || routes['/'] || (() => {});
         handler({params, query});
       };
-
       addEventListener('click', (e) => {
         const a = e.target.closest('a[href^="/"]');
         if (a && !a.target && !e.ctrlKey && !e.metaKey) {
@@ -22,9 +21,11 @@
           nav(a.pathname + a.search);
         }
       });
-      nav(location.pathname + location.search, false);
+      addEventListener('popstate', () => nav(location.pathname + location.search));
+      nav(location.pathname + location.search);
       return nav;
     }
+
     constructor(token, manifest) {
       this.base = token ? new URL(import.meta.url).origin : location.origin;
       this.token = token || "";
@@ -106,9 +107,18 @@
       return localStorage.userAndLevel.split(":");
     }
 
-    exec(action, ...args) { return this.req("exec", action, args); }
-    query(action, ...args) { return this.req("query", action, args); }
+    async exec(action, ...args) {
+      await this.ready;
+      return this.req("exec", action, args);
+    }
+
+    async query(action, ...args) {
+      await this.ready;
+      return this.req("query", action, args);
+    }
+
     fetch(url, options = {}) { return this.req("fetch", "", {url, ...options}); }
+
     emitSSE(v) { return this.req("events", "", v); }
 
     subSSE(f) {
@@ -136,6 +146,7 @@
       return this.req("cron", "save", {schedule, title, body, count});
     }
     cronList() { return this.req("cron", "list", null); }
+
     cronDelete(id) { return this.req("cron", "delete", {id}); }
 
     async generateAssets(manifest, concurrency = 5) {

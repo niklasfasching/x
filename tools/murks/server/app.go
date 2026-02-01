@@ -160,17 +160,17 @@ func (a *API) GetAppDB(ctx context.Context, id string, migrations []string, isTm
 		name, key = ":memory:", id+":memory:"
 	}
 	st := a.GetAppState(id)
-	st.RLock()
+	st.Lock()
 	if x, ok := st.DBs[key]; ok {
 		if slices.Equal(x.Schema, migrations) {
-			st.RUnlock()
+			st.Unlock()
 			ops.Metrics.Counter("app_db_cache_hit,app="+id, 1)
 			return x.DB, nil
 		}
+		defer x.DB.Close()
 		delete(st.DBs, key)
-		x.DB.Close()
 	}
-	st.RUnlock()
+	st.Unlock()
 	ops.Metrics.Counter("app_db_cache_miss,app="+id, 1)
 	ffw, uri := 1, fmt.Sprintf(
 		"%s?_pragma=page_size=%d&_pragma=max_page_count=%d&_timeout=10000",
