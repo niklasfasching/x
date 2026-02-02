@@ -56,8 +56,15 @@ func (a *Auth[T]) Verify(v string) (T, bool) {
 	return *t, true
 }
 
-func (a *Auth[T]) SignClaim(v map[string]any, ttl time.Duration) string {
-	return a.sign(token[map[string]any]{V: v, Exp: time.Now().Add(ttl).Unix()})
+func Sign[T any](a *Auth[T], v any, ttl time.Duration) string {
+	return a.sign(token[any]{V: v, Exp: time.Now().Add(ttl).Unix()})
+}
+
+func Verify[T, V any](a *Auth[T], s string, v V) (V, bool) {
+	if !a.verify(s, &v) {
+		return v, false
+	}
+	return v, true
 }
 
 func (a *Auth[T]) VerifyClaim(v string) (map[string]any, bool) {
