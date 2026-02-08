@@ -55,13 +55,9 @@ func New(uri string, migrations []string, f func(c *sqlite3.SQLiteConn) error, f
 		return d, err
 	}
 	log.Println("FFW migrating to new schema...")
-	parts := strings.Split(uri, "?")
-	oldName, newName := parts[0], parts[0]+".tmp"
-	newURI := newName
-	if len(parts) > 1 {
-		newURI = newName + "?" + parts[1]
-	}
-	newDB, err := New(newURI, migrations, f, 0)
+	oldName, query, _ := strings.Cut(uri, "?")
+	newName := oldName + ".tmp"
+	newDB, err := New(newName+"?"+query, migrations, f, 0)
 	if err != nil {
 		return nil, err
 	}
