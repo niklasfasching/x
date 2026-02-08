@@ -23,7 +23,7 @@ import (
 )
 
 //go:embed templates/*
-var baseFS embed.FS
+var TemplateFS embed.FS
 
 var Funcs = template.FuncMap{
 	"get": func(m any, k string) map[string]any {
@@ -104,12 +104,12 @@ func (h *H) BaseTemplate() (*template.Template, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to clone template: %w", err)
 	}
-	basePaths, err := findTemplateSets(baseFS, h.Dev)
+	basePaths, err := findTemplateSets(TemplateFS, h.Dev)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find base templates: %w", err)
 	}
 	return t.Option("missingkey=error").Funcs(Funcs).ParseFS(
-		baseFS, basePaths["templates/base.gohtml"]...,
+		TemplateFS, basePaths["templates/base.gohtml"]...,
 	)
 }
 

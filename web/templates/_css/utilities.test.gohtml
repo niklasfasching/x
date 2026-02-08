@@ -1,0 +1,130 @@
+{{ define "web-layout-demo" }}
+  <!DOCTYPE html>
+  <html>
+    <head>
+      {{ template "[web-layout]" . }}
+      {{ template "[assets]" "web-layout-demo" }}
+      <style>
+       .resize {
+         resize: horizontal;
+         overflow: hidden;
+         margin-right: 2em;
+       }
+       .placeholder {
+         background: #666;
+         min-height: 5rem;
+         display: grid;
+         place-content: center;
+         border: 1px solid rgba(255,255,255,0.1);
+       }
+      </style>
+    </head>
+    <body>
+      <main .rows .resize --gap:=2em>
+
+        <section .flow>
+          <h1>.grid (Equal Size)</h1>
+          <div .grid>
+            <div .placeholder background:=#ccc>1</div>
+            <div .placeholder background:=#bbb>2</div>
+            <div .placeholder background:=#aaa>3</div>
+            <div .placeholder background:=#999>4</div>
+          </div>
+        </section>
+
+        <section .flow>
+          <h1>.flex (Intrinsic)</h1>
+          <div .flex --min=10ch>
+            <div .placeholder flex:=1 background:=#ccc>Flex: 1</div>
+            <div .placeholder flex:="0 0 15ch" background:=#bbb>Fixed 15ch</div>
+            <div .placeholder flex:=2 background:=#aaa>Flex: 2</div>
+          </div>
+        </section>
+
+        <section .flow>
+          <h1>.columns (Sidebar)</h1>
+          <div .columns:="200px 1fr" height:=200px>
+            <div .placeholder background:=#ccc>Fixed (200px)</div>
+            <div .placeholder background:=#aaa>Fluid (1fr)</div>
+          </div>
+        </section>
+
+        <section .flow>
+          <h1>.rows (Vertical Layout)</h1>
+          <div .rows:="auto 1fr auto" height:=300px border:="1px solid #333">
+             <div .placeholder background:=#ccc min-height:=auto>Header (auto)</div>
+             <div .placeholder background:=#aaa>Content (1fr)</div>
+             <div .placeholder background:=#ccc min-height:=auto>Footer (auto)</div>
+          </div>
+        </section>
+
+        <section .flow>
+           <h1>.cluster (Wrapping Group)</h1>
+           <div .cluster .resize width:=max-content padding:=1em>
+             <div .placeholder width:=5rem background:=#ccc min-height:=2rem>Tag 1</div>
+             <div .placeholder width:=6rem background:=#bbb min-height:=2rem>Tag 2</div>
+             <div .placeholder width:=4rem background:=#aaa min-height:=2rem>Tag 3</div>
+             <div .placeholder width:=7rem background:=#999 min-height:=2rem>Tag 4</div>
+           </div>
+        </section>
+
+        <section .flow>
+           <h1>.center (Intrinsic)</h1>
+           <div .center background:=#333 padding:=1rem>
+             <div .placeholder background:=#ccc>Centered Box</div>
+           </div>
+        </section>
+
+        <section .flow>
+          <h1>.reel (Scroller)</h1>
+          <div .reel>
+            <div .placeholder width:=60% background:=#ccc>Slide 1</div>
+            <div .placeholder width:=60% background:=#bbb>Slide 2</div>
+            <div .placeholder width:=60% background:=#aaa>Slide 3</div>
+            <div .placeholder width:=60% background:=#999>Slide 4</div>
+          </div>
+        </section>
+
+        <section .flow>
+          <h1>.stack (Overlay)</h1>
+          <div .stack height:=200px border:="1px solid #333">
+            <div .placeholder background:=#eee>Background Layer</div>
+            <div .center>
+              <div padding:=1rem background:=white border:="1px solid #000" color:=black>
+                <strong>Overlay Content</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section .flow>
+          <h1>.container (Max Width)</h1>
+          <div .container background:=#888 padding:=1rem>
+             This box is constrained to 80ch max-width. Resize window to see.
+          </div>
+        </section>
+
+        <section .flow>
+            <h1>Text Utilities</h1>
+            <div .grid --min=20ch>
+                <div .flow>
+                   <strong>.ellipsis (--lines=2)</strong>
+                   <p .ellipsis --lines=2 background:=#999 width:=30%>
+                     This is a very long paragraph that should be truncated after two lines
+                     of text to demonstrate the ellipsis utility class working correctly in
+                     this context. It keeps going and going to ensure overflow.
+                   </p>
+                </div>
+                <div .flow>
+                   <strong>.break</strong>
+                   <div .break width:=10ch border:="1px solid red">
+                     http://superlongdomainname.com
+                   </div>
+                </div>
+            </div>
+        </section>
+
+      </main>
+    </body>
+  </html>
+{{ end }}
