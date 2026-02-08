@@ -94,15 +94,28 @@ func (t *T) GetUpdates(ctx context.Context) ([]Update, error) {
 	return v.Result, nil
 }
 
-func (t *T) SendMessage(chatID int, kvs ...string) error {
+func (t *T) SendMessage(chatID int, kvs ...string) (int, error) {
 	vs := url.Values{"chat_id": {strconv.Itoa(chatID)}}
 	if len(kvs)%2 != 0 {
-		return fmt.Errorf("number of kvs must be even: %v", kvs)
+		return 0, fmt.Errorf("number of kvs must be even: %v", kvs)
 	}
 	for i := 0; i < len(kvs); i += 2 {
 		vs.Add(kvs[i], kvs[i+1])
 	}
-	return t.POST("sendMessage", vs, nil)
+	r := struct{ Result struct{ Message_id int } }{}
+	if err := t.POST("sendMessage", vs, &r); err != nil {
+		return 0, err
+	}
+	return r.Result.Message_id, nil
+}
+
+func (t *T) EditMessage(chatID, messageID int, text string) error {
+	vs := url.Values{
+		"chat_id":    {strconv.Itoa(chatID)},
+		"message_id": {strconv.Itoa(messageID)},
+		"text":       {text},
+	}
+	return t.POST("editMessageText", vs, nil)
 }
 
 func (t *T) POST(method string, vs url.Values, v any) error {
