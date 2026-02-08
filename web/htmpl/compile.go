@@ -150,8 +150,12 @@ func (c *Compiler) Compile(tpl *template.Template) (t *Template, err error) {
 	}
 	c.resolveCalls()
 	w := &strings.Builder{}
-	for _, name := range slices.Sorted(maps.Keys(c.Calls)) {
-		fmt.Fprintf(w, "{{if eq . %q}}\n", name)
+	for i, name := range slices.Sorted(maps.Keys(c.Calls)) {
+		if i == 0 {
+			fmt.Fprintf(w, "{{if eq . %q}}\n", name)
+		} else {
+			fmt.Fprintf(w, "{{else if eq . %q}}\n", name)
+		}
 		for _, name := range c.Calls[name] {
 			if isComponentTplName(name) {
 				fmt.Fprintf(w, "{{template %q .}}\n", "[assets]"+name)
@@ -159,7 +163,9 @@ func (c *Compiler) Compile(tpl *template.Template) (t *Template, err error) {
 				fmt.Fprintf(w, "{{template %q .}}\n", name)
 			}
 		}
-		fmt.Fprintf(w, "{{end}}")
+	}
+	if len(c.Calls) > 0 {
+		fmt.Fprintf(w, `{{else}} "{{.}}" {{index "unknown [asset]" -1}}{{end}}`)
 	}
 	c.Sources["[assets]"] = w.String()
 	if _, err := tpl.New("[assets]").Parse(c.Sources["[assets]"]); err != nil {
