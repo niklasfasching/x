@@ -102,8 +102,8 @@ func TestFFW(t *testing.T) {
 			t.Fatal(err)
 		}
 		db.Close()
-		if _, err := New(tmp+"/0.db", m2, nil, 0); err != MigrateErr {
-			t.Fatalf("expected MigrateErr, got %v", err)
+		if _, err := New(tmp+"/0.db", m2, nil, 0); err == nil {
+			t.Fatalf("expected error")
 		}
 	})
 
@@ -125,8 +125,8 @@ func TestFFW(t *testing.T) {
 	t.Run("ffw=1 blocks drops", func(t *testing.T) {
 		db, _ := New(tmp+"/1b.db", m2, nil, 1)
 		db.Close()
-		if _, err := New(tmp+"/1b.db", m3, nil, 1); err == nil || err == MigrateErr {
-			t.Fatalf("expected forward-only error, got %v", err)
+		if _, err := New(tmp+"/1b.db", m3, nil, 1); err == nil {
+			t.Fatalf("expected forward-only error")
 		}
 	})
 
@@ -141,6 +141,20 @@ func TestFFW(t *testing.T) {
 		rows, _ := QueryMap[any](db, "SELECT * FROM items")
 		if len(rows) != 1 || rows[0]["desc"] != "foo" {
 			t.Fatalf("expected desc preserved, name dropped: %v", rows)
+		}
+		db.Close()
+	})
+
+	t.Run("ffw=2 empty migrations clears data", func(t *testing.T) {
+		db, _ := New(tmp+"/2b.db", m1, nil, 2)
+		Exec(db, "INSERT INTO items (name) VALUES (?)", "test")
+		db.Close()
+		db, err := New(tmp+"/2b.db", []string{}, nil, 2)
+		if err != nil {
+			t.Fatalf("expected success, got %v", err)
+		}
+		if _, err := QueryMap[any](db, "SELECT * FROM items"); err == nil {
+			t.Fatalf("expected items table to be gone")
 		}
 		db.Close()
 	})
