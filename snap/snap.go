@@ -111,7 +111,7 @@ func (s *S) Snap(t *testing.T, v any) {
 	t.Helper()
 	x := s.Marshal(t, v)
 	if expected := s.Expected[x.K]; !DoUpdate() && x.V != expected {
-		d, _ := Diff(expected, x.V, "\n").Render(true)
+		d, _ := Diff(expected, x.V, "\n").Render(true, nil)
 		t.Log("\n" + d)
 		t.Cleanup(func() { t.Fatalf("Failed: %q", t.Name()) })
 	}

@@ -16,10 +16,13 @@ type Op struct {
 	Vs   []string
 }
 
-func (ops Ops) Render(color bool) (string, bool) {
+func (ops Ops) Render(color bool, filter func(Op) bool) (string, bool) {
 	w, cs, d := &strings.Builder{}, map[string]int{"=": 37, "-": 31, "+": 32}, false
 	for _, op := range ops {
 		d = d || op.Type != "="
+		if filter != nil && !filter(op) {
+			continue
+		}
 		for _, v := range op.Vs {
 			if s := fmt.Sprintf("%s %s", op.Type, v); !color {
 				fmt.Fprintf(w, "%s\n", s)
@@ -71,3 +74,5 @@ func diff(v1s, v2s []string) []Op {
 	}
 	return ops
 }
+
+func ChangesOnly(op Op) bool { return op.Type != "=" }

@@ -98,7 +98,7 @@ func TestDiff(t *testing.T) {
 	}
 	run := func(k, a, b string) {
 		t.Run(k, func(t *testing.T) {
-			d, eq := Diff(a, b, "\n").Render(false)
+			d, eq := Diff(a, b, "\n").Render(false, nil)
 			s.Snap(t, &jml.JML{V: map[string]any{"a": a, "b": b, "diff": d, "eq": eq}})
 		})
 	}
