@@ -1,12 +1,14 @@
 package headless
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"slices"
 	"sync"
+	"time"
 )
 
 type Session struct {
@@ -85,24 +87,61 @@ func (s *Session) Open(html string) error {
 	return s.Exec("Page.setDocumentContent", Params{"html": html, "frameId": s.targetID}, nil)
 }
 
-func (s *Session) Eval(js string, v any) error {
-	return s.eval(js, s.contextID, v)
+func (s *Session) Eval(ctx context.Context, js string, v any) error {
+	return s.eval(ctx, js, s.contextID, v)
 }
 
-func (s *Session) eval(js string, id int, v any) error {
-	r, params := struct {
-		Result struct{ Value json.RawMessage }
-	}{}, Params{"expression": js, "returnByValue": true, "replMode": true, "awaitPromise": true}
-	if id != 0 {
-		params["contextId"] = id
+func (s *Session) EvalWait(ctx context.Context, js string, interval time.Duration) error {
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		v := *new(any)
+		err := s.Eval(ctx, js, &v)
+		if err == nil && v != nil && !reflect.ValueOf(v).IsZero() {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(cmp.Or(interval, 100*time.Millisecond)):
+		}
 	}
-	if err := s.Exec("Runtime.evaluate", params, &r); err != nil {
+}
+
+func (s *Session) eval(ctx context.Context, js string, id int, v any) error {
+	if err := ctx.Err(); err != nil {
 		return err
 	}
-	if v == nil || r.Result.Value == nil || string(r.Result.Value) == "null" {
-		return nil
+	c := make(chan error, 1)
+	go func() {
+		r, params := struct {
+			Result struct{ Value json.RawMessage }
+		}{}, Params{"expression": js, "returnByValue": true, "replMode": true, "awaitPromise": true}
+		if id != 0 {
+			params["contextId"] = id
+		}
+		dl, ok := ctx.Deadline()
+		if ok {
+			params["timeout"] = max(1, int((time.Until(dl)+time.Millisecond-1)/time.Millisecond))
+		}
+		if err := s.Exec("Runtime.evaluate", params, &r); err != nil {
+			c <- err
+			return
+		}
+		if v == nil || r.Result.Value == nil || string(r.Result.Value) == "null" {
+			c <- nil
+			return
+		}
+		c <- json.Unmarshal(r.Result.Value, v)
+	}()
+	select {
+	case err := <-c:
+		return err
+	case <-ctx.Done():
+		go s.Exec("Runtime.terminateExecution", nil, nil)
+		return ctx.Err()
 	}
-	return json.Unmarshal(r.Result.Value, v)
 }
 
 func (s *Session) EvalTempUA(js string, v any) error {
@@ -111,7 +150,7 @@ func (s *Session) EvalTempUA(js string, v any) error {
 	if err := s.Exec("Page.createIsolatedWorld", params, &r); err != nil {
 		return err
 	}
-	return s.eval(js, r.ExecutionContextId, v)
+	return s.eval(context.Background(), js, r.ExecutionContextId, v)
 }
 
 func (s *Session) EvalUA(js string, v any) error {
@@ -123,7 +162,7 @@ func (s *Session) EvalUA(js string, v any) error {
 		}
 		s.uaContextID = r.ExecutionContextId
 	}
-	return s.eval(js, s.uaContextID, v)
+	return s.eval(context.Background(), js, s.uaContextID, v)
 }
 
 func (s *Session) Close() error {
@@ -181,7 +220,7 @@ func (s *Session) bind(name string, contextId *int, f any) error {
 	if err := s.Exec("Page.addScriptToEvaluateOnNewDocument", Params{"source": js}, nil); err != nil {
 		return err
 	}
-	return s.eval(js, *contextId, nil)
+	return s.eval(context.Background(), js, *contextId, nil)
 }
 
 func (s *Session) onBindingCalled(m struct{ Name, Payload string }) {
@@ -216,7 +255,7 @@ func (s *Session) onBindingCalled(m struct{ Name, Payload string }) {
       window.%[1]s.pending[id][isErr ? "reject" : "resolve"](arg);
       delete window.%[1]s.pending[id];
     })()`, m.Name, p.ID, isErr, arg)
-	if err := s.Eval(js, nil); err != nil {
+	if err := s.Eval(context.Background(), js, nil); err != nil {
 		panic(err)
 	}
 }

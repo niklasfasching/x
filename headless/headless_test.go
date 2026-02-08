@@ -1,6 +1,8 @@
 package headless
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -63,7 +65,7 @@ func TestBind(t *testing.T) {
             %[2]s;
           }`, jsCall, jsExpect)
 		pass := false
-		if err := s.Eval(js, &pass); err != nil {
+		if err := s.Eval(context.Background(), js, &pass); err != nil {
 			t.Fatal(err)
 		} else if !pass {
 			t.Fatalf("js: '%s' != '%s'", jsCall, jsExpect)
@@ -81,6 +83,40 @@ func TestBind(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	if voidBindingArg != 9001 {
 		t.Errorf("bad voidBindingArg: %d", voidBindingArg)
+	}
+}
+
+func TestEvalTimeout(t *testing.T) {
+	h, s, err := startAndOpen("about:blank", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	if err := s.Eval(ctx, `await new Promise(() => {})`, nil); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("expected %v, got %v", context.DeadlineExceeded, err)
+	}
+}
+
+func TestEvalWait(t *testing.T) {
+	h, s, err := startAndOpen("about:blank", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Stop()
+	if err := s.Eval(context.Background(), `setTimeout(() => window.x = 1, 25)`, nil); err != nil {
+		t.Fatal(err)
+	}
+	okCtx, okCancel := context.WithTimeout(context.Background(), time.Second)
+	defer okCancel()
+	if err := s.EvalWait(okCtx, `window.x`, 10*time.Millisecond); err != nil {
+		t.Fatalf("wait should succeed: %v", err)
+	}
+	failCtx, failCancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer failCancel()
+	if err := s.EvalWait(failCtx, `window.y`, 10*time.Millisecond); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("expected %v, got %v", context.DeadlineExceeded, err)
 	}
 }
 

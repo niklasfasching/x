@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"maps"
 )
 
 type H struct {
@@ -58,6 +60,7 @@ var defaultBrowserArgs = map[string]any{
 	// TODO: dynamic (https://intoli.com/blog/not-possible-to-block-chrome-headless/chrome-headless-test.html)
 	"--user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
 	"--disable-component-extensions-with-background-pages": true,
+	"--window-size": "1920,1080",
 }
 
 func init() {
@@ -68,12 +71,8 @@ func init() {
 
 func Start(args map[string]any) (*H, error) {
 	m, mergedArgs := map[string]any{}, []string{}
-	for k, v := range defaultBrowserArgs {
-		m[k] = v
-	}
-	for k, v := range args {
-		m[k] = v
-	}
+	maps.Copy(m, defaultBrowserArgs)
+	maps.Copy(m, args)
 	for a, v := range m {
 		if enable, isBool := v.(bool); isBool && enable {
 			mergedArgs = append(mergedArgs, a)
@@ -101,7 +100,11 @@ func Start(args map[string]any) (*H, error) {
 		sessions: map[string]*Session{},
 	}
 	if err := h.cmd.Start(); err != nil {
-		return nil, err
+		return nil, errors.Join(err, ir.Close(), iw.Close(), or.Close(), ow.Close())
+	} else if err := ir.Close(); err != nil {
+		return nil, errors.Join(err, h.Stop())
+	} else if err := ow.Close(); err != nil {
+		return nil, errors.Join(err, h.Stop())
 	}
 	go func() {
 		if err := h.loop(); err != nil {
@@ -207,7 +210,7 @@ func (h *H) Capture(ctx context.Context, url string) (*Response, string, error) 
 	<-interactiveCtx.Done()
 	r := struct{ Data string }{}
 	// https://issues.chromium.org/issues/40495614
-	s.Eval(`
+	s.Eval(ctx, `
       await Promise.all([...document.querySelectorAll("img[loading=lazy]")].map(img => {
         img.loading = "eager";
         if (img.complete) return;

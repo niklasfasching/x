@@ -33,7 +33,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer h.Stop()
-	s, err := h.Open("about:blank")
+	s, err := h.Open("about:blank", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
