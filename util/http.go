@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -24,7 +26,20 @@ func NewPublicDialer(dialer *net.Dialer) func(context.Context, string, string) (
 				return nil, fmt.Errorf("restricted ip: %v", ip)
 			}
 		}
-		return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].String(), port))
+		if dialer == nil {
+			dialer = &net.Dialer{}
+		}
+		// TODO: prefer ipv4. ppl seem to fuck up ipv6 more often and don't fix it bc no one uses it
+		slices.SortFunc(ips, func(a, b netip.Addr) int { return a.Compare(b) })
+		lastErr := error(nil)
+		for _, ip := range ips {
+			conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+			if err == nil {
+				return conn, nil
+			}
+			lastErr = err
+		}
+		return nil, lastErr
 	}
 }
 
